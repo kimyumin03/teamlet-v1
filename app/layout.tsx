@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "axhub × Next.js",
-  description: "조코딩 AX 파트너스 axhub 위에서 굴러가는 Next.js 바이브코딩 템플릿",
+  title: "Teamlet — 한국형 HR",
+  description: "인사·조직·휴가·결재를 한 곳에서. axhub 위에서 동작하는 Teamlet HR.",
 };
 
 export default function RootLayout({

@@ -3,46 +3,55 @@
 @tailwind utilities;
 
 /* ──────────────────────────────────────────────────────────────────────────
- * axhub 디자인 시스템 토큰 (v2.1 발췌) — 콘솔/프론트와 무드 정렬.
- * primary=블루, surface=gray-50 위 흰 카드, Pretendard. 다크는 prefers-color-scheme.
+ * Teamlet 디자인 토큰 — Cool Slate 팔레트 (docs/05). teamlet 모노레포에서 이식.
+ *   brand   = Slate 900 단색 (그라데이션 금지 · 5원칙 #5)
+ *   primary = Cool Blue 600 (포커스/링크/액센트, 템플릿 --primary 변수명 유지 → 기존 클래스 호환)
+ *   surface = Slate 50 위 흰 카드, Pretendard. 다크는 prefers-color-scheme.
  * ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --primary: #2d64fa;
-  --primary-hover: #5985fb;
-  --primary-soft: #eaf0fe;
-  --primary-soft-hover: #d6e2fd;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --primary-soft-hover: #dbeafe;
 
-  --bg-surface: #f6f7f9;
+  /* 브랜드 = Slate 900 단색 (버튼/로고/제목 강조) */
+  --brand: #0f172a;
+  --brand-hover: #1e293b;
+
+  --bg-surface: #f8fafc;  /* slate-50 */
   --bg-content: #ffffff;
 
-  --fg-default: #16171b;
-  --fg-muted: #6d717e;
-  --fg-subtle: #9ca0ab;
+  --fg-default: #0f172a;  /* slate-900 */
+  --fg-muted: #475569;    /* slate-600 */
+  --fg-subtle: #94a3b8;   /* slate-400 */
 
-  --border-default: #e4e5e8;
+  --border-default: #e2e8f0;  /* slate-200 */
 
-  --success: #27c961;
-  --warning: #f6c205;
+  --success: #22c55e;
+  --warning: #f59e0b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #4b7bff;
-    --primary-hover: #5985fb;
-    --primary-soft: rgba(75, 123, 255, 0.22);
-    --primary-soft-hover: rgba(75, 123, 255, 0.32);
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+    --primary-soft: rgba(96, 165, 250, 0.18);
+    --primary-soft-hover: rgba(96, 165, 250, 0.28);
 
-    --bg-surface: #1d1e23;
-    --bg-content: #25272d;
+    --brand: #ffffff;
+    --brand-hover: #f1f5f9;
 
-    --fg-default: #ffffff;
-    --fg-muted: #d1d3d8;
-    --fg-subtle: #9ca0ab;
+    --bg-surface: #020617;  /* slate-950 */
+    --bg-content: #0f172a;  /* slate-900 */
+
+    --fg-default: #f8fafc;
+    --fg-muted: #cbd5e1;
+    --fg-subtle: #64748b;
 
     --border-default: rgba(255, 255, 255, 0.1);
 
-    --success: #3ddb78;
-    --warning: #ffe246;
+    --success: #4ade80;
+    --warning: #fbbf24;
   }
 }
 
