@@ -1,4 +1,5 @@
 import { AxHubError } from '@ax-hub/sdk'
+import Link from 'next/link'
 import {
   APP_SLUG,
   isAxhubConfigured,
@@ -83,9 +84,9 @@ export default async function Home() {
           )}
         </section>
 
-        {/* HR 모듈 — 이식 예정 슬라이스 (현재는 안내) */}
+        {/* HR 모듈 */}
         <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-          <Module title="구성원" desc="회사 조직·인사" />
+          <Module title="구성원" desc="회사 조직·인사" href="/members" />
           <Module title="휴가" desc="연차·신청·결재" />
           <Module title="워크플로우" desc="결재·공지·문서" />
         </div>
@@ -106,12 +107,21 @@ export default async function Home() {
   )
 }
 
-function Module({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-content)] p-4 transition hover:border-[var(--primary)] hover:shadow-sm">
+function Module({ title, desc, href }: { title: string; desc: string; href?: string }) {
+  const inner = (
+    <>
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-[11px] text-[var(--fg-subtle)]">{desc}</p>
-    </div>
+    </>
+  )
+  const cls =
+    'block rounded-xl border border-[var(--border-default)] bg-[var(--bg-content)] p-4 transition hover:border-[var(--primary)] hover:shadow-sm'
+  return href ? (
+    <Link href={href} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <div className={cls}>{inner}</div>
   )
 }
 
