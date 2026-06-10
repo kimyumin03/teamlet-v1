@@ -2,102 +2,277 @@ import Link from 'next/link'
 import { AxHubError, where, type MeResponse } from '@ax-hub/sdk'
 import { isAxhubConfigured, makeAxhub, TENANT } from '@/lib/axhub-server'
 import { table } from '@/lib/data'
+import { PostCard, type Announcement } from './_components/post-card'
+import { HomeRail } from './_components/home-rail'
 
-async function loadMe(): Promise<MeResponse | null> {
-  if (!isAxhubConfigured()) return null
-  try {
-    return await (await makeAxhub()).identity.me()
-  } catch (err) {
-    if (err instanceof AxHubError) console.error('[axhub] /me failed', { code: err.code })
-    return null
+export const dynamic = 'force-dynamic'
+
+type AnnRow = {
+  id: string
+  company_id: string
+  author: string
+  role: string
+  title: string
+  body: string
+  pinned: boolean
+  created_at: string
+}
+type RecogRow = {
+  id: string
+  company_id: string
+  from_name: string
+  to_name: string
+  message: string
+  emoji: string
+  created_at: string
+}
+
+function getGreeting(): string {
+  const hour = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getHours()
+  if (hour < 12) return '좋은 아침이에요'
+  if (hour < 18) return '좋은 오후예요'
+  return '좋은 저녁이에요'
+}
+
+function toAnnouncement(r: AnnRow): Announcement {
+  return {
+    id: r.id,
+    authorName: r.author,
+    title: r.title,
+    content: r.body,
+    createdAt: r.created_at,
+    isPinned: !!r.pinned,
   }
 }
 
-async function memberCount(): Promise<number | null> {
-  if (!isAxhubConfigured()) return null
-  try {
-    const employees = await table<{ id: string; company_id: string }>('employees')
-    return await employees.count({ where: where('company_id').eq(TENANT) })
-  } catch {
-    return null
+async function loadAll() {
+  if (!isAxhubConfigured()) return { me: null, anns: [] as AnnRow[], recogs: [] as RecogRow[], count: 0 }
+  const safe = async <T,>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await fn()
+    } catch (err) {
+      if (err instanceof AxHubError) console.error('[axhub] home load', { code: err.code })
+      return fallback
+    }
   }
+  const me = await safe<MeResponse | null>(async () => (await makeAxhub()).identity.me(), null)
+  const anns = await safe<AnnRow[]>(async () => {
+    const t = await table<AnnRow>('announcements')
+    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items
+  }, [])
+  const recogs = await safe<RecogRow[]>(async () => {
+    const t = await table<RecogRow>('recognitions')
+    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items
+  }, [])
+  const count = await safe<number>(async () => {
+    const t = await table<{ id: string; company_id: string }>('employees')
+    return await t.count({ where: where('company_id').eq(TENANT) })
+  }, 0)
+  return { me, anns, recogs, count }
 }
 
-export default async function Home() {
-  const [me, count] = await Promise.all([loadMe(), memberCount()])
-  const name = me?.name ?? me?.email ?? '게스트'
+function isThisWeek(d: string) {
+  const now = new Date()
+  const daysSinceMonday = (now.getDay() + 6) % 7
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - daysSinceMonday)
+  weekStart.setHours(0, 0, 0, 0)
+  return new Date(d) >= weekStart
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
+  const activeTab = tab === 'news' || tab === 'recognition' ? tab : 'feed'
+  const { me, anns, recogs, count } = await loadAll()
+
+  const firstName = me?.name?.split(' ')[0] ?? me?.name ?? me?.email ?? ''
+  const greeting = getGreeting()
+  const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+
+  const byDate = [...anns].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )
+  const pinned = byDate.find((a) => a.pinned)
+  const feedAnnouncements = (
+    pinned ? [pinned, byDate.find((a) => a.id !== pinned.id)] : byDate.slice(0, 2)
+  ).filter(Boolean) as AnnRow[]
+  const thisWeekCount = anns.filter((a) => isThisWeek(a.created_at)).length
+  const pinnedCount = anns.filter((a) => a.pinned).length
 
   return (
-    <div className="page-body">
-      <div className="page-h">
-        <div>
-          <h1 className="h-title-h">
-            안녕하세요, {name}님 <span className="wave">👋</span>
-          </h1>
-          <div className="h-sub-h">
-            {me?.tenants?.[0]?.tenantSlug ?? 'Teamlet'} · 오늘도 좋은 하루 되세요
-            <span className="ping">
-              <i /> axhub 연결됨
-            </span>
+    <div className="work">
+      <main className="feed">
+        {/* 인사말 헤더 */}
+        <div className="feed-head">
+          <div>
+            <h1 className="h-title-h">
+              {greeting}, {firstName}님 <span className="wave">👋</span>
+            </h1>
+            <div className="h-sub-h">
+              {today}
+              <span className="ping">
+                <i />
+                출근 {count} · 휴가 0
+              </span>
+            </div>
+          </div>
+          <div className="feed-actions">
+            <Link href="/leave" className="btn-sm btn-sm-ghost">
+              휴가 신청
+            </Link>
+            <Link href="/?tab=recognition" className="btn-sm">
+              동료에게 전달하기
+            </Link>
           </div>
         </div>
-      </div>
 
-      <div className="kpis">
-        <Link href="/members" className="kpi">
-          <span className="lbl">구성원</span>
-          <span className="val">
-            {count ?? '—'}
-            <small>명</small>
-          </span>
-          <span className="delta">회사 전체 인원</span>
-        </Link>
-        <Link href="/leave" className="kpi">
-          <span className="lbl">휴가</span>
-          <span className="val">—</span>
-          <span className="delta">곧 이식 예정</span>
-        </Link>
-        <Link href="/workflow" className="kpi">
-          <span className="lbl">결재 대기</span>
-          <span className="val">—</span>
-          <span className="delta">곧 이식 예정</span>
-        </Link>
-        <Link href="/documents" className="kpi">
-          <span className="lbl">문서·증명서</span>
-          <span className="val">—</span>
-          <span className="delta">곧 이식 예정</span>
-        </Link>
-      </div>
+        {/* 탭 */}
+        <div className="tabs">
+          <Link href="/?tab=feed" className={`tab${activeTab === 'feed' ? ' active' : ''}`}>
+            홈 피드
+          </Link>
+          <Link href="/?tab=news" className={`tab${activeTab === 'news' ? ' active' : ''}`}>
+            회사 소식
+          </Link>
+          <Link href="/?tab=recognition" className={`tab${activeTab === 'recognition' ? ' active' : ''}`}>
+            인정·피드백
+            {recogs.length > 0 && <span className="count">{recogs.length}</span>}
+          </Link>
+        </div>
 
-      <div className="sec-divider">
-        바로가기 <span className="line" />
+        {activeTab === 'feed' && (
+          <section>
+            <div className="sec-divider">
+              공지
+              {anns.length > 0 && <span className="ct">{anns.length}</span>}
+              <span className="line" />
+            </div>
+            {feedAnnouncements.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {feedAnnouncements.map((a) => (
+                  <PostCard key={a.id} item={toAnnouncement(a)} />
+                ))}
+              </div>
+            ) : (
+              <EmptyFeed />
+            )}
+          </section>
+        )}
+
+        {activeTab === 'news' && (
+          <section>
+            <div className="kpis" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 16 }}>
+              <div className="kpi">
+                <span className="lbl">읽지 않은 공지</span>
+                <span className="val num">
+                  0<small>건</small>
+                </span>
+              </div>
+              <div className="kpi">
+                <span className="lbl">이번 주 새 글</span>
+                <span className="val num">
+                  {thisWeekCount}
+                  <small>건</small>
+                </span>
+                {pinnedCount > 0 && <span className="delta">📌 필독 {pinnedCount}건</span>}
+              </div>
+            </div>
+            {byDate.length === 0 ? (
+              <EmptyNews />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {byDate.map((a) => (
+                  <PostCard key={a.id} item={toAnnouncement(a)} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'recognition' && (
+          <section className="flex flex-col gap-3">
+            <div className="sec-divider">
+              인정 · 피드백<span className="line" />
+            </div>
+            {recogs.length === 0 ? (
+              <div className="rounded-[14px] border border-dashed border-border px-5 py-12 text-center text-foreground-muted">
+                <div className="mb-2 text-[26px]">💬</div>
+                <div className="mb-1.5 text-[15px] font-semibold text-foreground">
+                  받은 인정 · 피드백이 없어요
+                </div>
+                <p className="text-[12.5px] leading-relaxed">
+                  동료가 나에게 보낸 인정과 피드백 메시지가 여기에 표시돼요.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recogs.map((r) => (
+                  <article
+                    key={r.id}
+                    className="group rounded-[12px] border border-border bg-background-primary p-4"
+                  >
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="rounded-full border border-warning-200 bg-warning-50 px-2 py-0.5 text-[11px] font-semibold text-warning-700">
+                        {r.emoji || '⭐'} 인정
+                      </span>
+                      <span className="text-[12.5px] font-medium text-foreground">
+                        {r.from_name}님이 보냄
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-foreground">
+                      {r.message}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+
+      <HomeRail activeCount={count} />
+    </div>
+  )
+}
+
+function EmptyFeed() {
+  return (
+    <div
+      style={{
+        padding: '48px 20px',
+        textAlign: 'center',
+        border: '1px dashed var(--border)',
+        borderRadius: 14,
+        color: 'var(--fg-muted)',
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg)', marginBottom: 6 }}>
+        등록된 공지사항이 없어요
       </div>
-      <div className="kpis" style={{ marginBottom: 0 }}>
-        <Link href="/members" className="kpi">
-          <span className="lbl">구성원 관리</span>
-          <span className="val" style={{ fontSize: 16 }}>
-            조직·인사 →
-          </span>
-        </Link>
-        <Link href="/leave" className="kpi">
-          <span className="lbl">휴가</span>
-          <span className="val" style={{ fontSize: 16 }}>
-            연차·신청 →
-          </span>
-        </Link>
-        <Link href="/workflow" className="kpi">
-          <span className="lbl">워크플로우</span>
-          <span className="val" style={{ fontSize: 16 }}>
-            결재·공지 →
-          </span>
-        </Link>
-        <Link href="/settings" className="kpi">
-          <span className="lbl">설정</span>
-          <span className="val" style={{ fontSize: 16 }}>
-            회사·개인 →
-          </span>
-        </Link>
+      <div style={{ fontSize: 12.5 }}>팀의 소식을 공유해 보세요.</div>
+    </div>
+  )
+}
+
+function EmptyNews() {
+  return (
+    <div
+      style={{
+        padding: '60px 20px',
+        textAlign: 'center',
+        border: '1px dashed var(--border)',
+        borderRadius: 14,
+        color: 'var(--fg-muted)',
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg)', marginBottom: 6 }}>
+        등록된 공지사항이 없어요
       </div>
+      <div style={{ fontSize: 12.5 }}>회사 공지사항을 작성하면 전 구성원에게 전달됩니다.</div>
     </div>
   )
 }
