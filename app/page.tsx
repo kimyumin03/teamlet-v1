@@ -1,177 +1,103 @@
-import { AxHubError } from '@ax-hub/sdk'
 import Link from 'next/link'
-import {
-  APP_SLUG,
-  isAxhubConfigured,
-  makeAxhub,
-} from '@/lib/axhub-server'
-import type { MeResponse } from '@ax-hub/sdk'
+import { AxHubError, where, type MeResponse } from '@ax-hub/sdk'
+import { isAxhubConfigured, makeAxhub, TENANT } from '@/lib/axhub-server'
+import { table } from '@/lib/data'
 
-// 서버 컴포넌트에서 직접 호출 — makeAxhub() 가 들어온 _hub_access 쿠키를 JWT 로 SDK 에 박아요.
-// per-user 응답이라 cache: 'no-store' 로 매 요청 평가 (SDK 가 받는 RequestOptions 로 전달).
 async function loadMe(): Promise<MeResponse | null> {
   if (!isAxhubConfigured()) return null
   try {
-    const sdk = await makeAxhub()
-    return await sdk.identity.me()
+    return await (await makeAxhub()).identity.me()
   } catch (err) {
-    // AxHubError 면 .code 로 분기 가능 (Korean message 매칭 금지).
-    if (err instanceof AxHubError) {
-      console.error('[axhub] /me failed', { code: err.code, category: err.category, requestId: err.requestId })
-    }
+    if (err instanceof AxHubError) console.error('[axhub] /me failed', { code: err.code })
+    return null
+  }
+}
+
+async function memberCount(): Promise<number | null> {
+  if (!isAxhubConfigured()) return null
+  try {
+    const employees = await table<{ id: string; company_id: string }>('employees')
+    return await employees.count({ where: where('company_id').eq(TENANT) })
+  } catch {
     return null
   }
 }
 
 export default async function Home() {
-  const me = await loadMe()
-  const tenant = me?.tenants?.[0]
-  const configured = isAxhubConfigured()
+  const [me, count] = await Promise.all([loadMe(), memberCount()])
+  const name = me?.name ?? me?.email ?? '게스트'
 
   return (
-    <main className="min-h-screen bg-[var(--bg-surface)] text-[var(--fg-default)]">
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-7 px-6 py-20">
-        {/* 히어로 — Slate 900 단색 브랜드 (그라데이션 금지) */}
-        <header className="flex flex-col items-center text-center">
-          <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-[14px] bg-[var(--brand)] text-lg font-bold text-white shadow-sm">
-            T
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary-soft)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
-            한국형 HR · axhub
-          </span>
-          <h1 className="mt-4 text-[2.75rem] font-extrabold leading-tight tracking-[-0.03em]">
-            Teamlet
+    <div className="page-body">
+      <div className="page-h">
+        <div>
+          <h1 className="h-title-h">
+            안녕하세요, {name}님 <span className="wave">👋</span>
           </h1>
-          <p className="mt-2.5 max-w-sm text-[15px] leading-relaxed text-[var(--fg-muted)]">
-            인사·조직·휴가·결재를 한 곳에서. axhub 로그인으로 바로 시작해요.
-          </p>
-        </header>
-
-        {/* 환영 카드 — sdk.identity.me 결과 (서버에서 호출) */}
-        <section className="w-full rounded-2xl border border-[var(--border-default)] bg-[var(--bg-content)] p-7 text-center shadow-sm">
-          {me ? (
-            <>
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-white">
-                {(me.name ?? me.email ?? '?').trim().charAt(0).toUpperCase()}
-              </div>
-              <p className="text-xl font-bold tracking-[-0.01em]">
-                환영합니다, {me.name ?? me.email}님 👋
-              </p>
-              <p className="mt-1.5 text-sm text-[var(--fg-muted)]">{me.email}</p>
-              {tenant && (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-3.5 py-2">
-                  <span className="text-sm font-semibold">{tenant.tenantSlug}</span>
-                  <span className="rounded-full bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)]">
-                    {tenant.role}
-                  </span>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <span className="mx-auto mb-3 block h-2.5 w-2.5 rounded-full bg-[var(--warning)]" />
-              <p className="text-[15px] font-semibold text-[var(--fg-default)]">
-                {configured
-                  ? '로그인 정보를 불러오지 못했어요. axhub 로그인 상태를 확인해 주세요.'
-                  : '로컬 실행 중'}
-              </p>
-              {!configured && (
-                <p className="mt-1.5 text-sm text-[var(--fg-muted)]">
-                  axhub 로 배포하면 로그인한 사용자가 여기 표시돼요.
-                </p>
-              )}
-            </>
-          )}
-        </section>
-
-        {/* HR 모듈 */}
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-          <Module title="구성원" desc="회사 조직·인사" href="/members" />
-          <Module title="휴가" desc="연차·신청·결재" />
-          <Module title="워크플로우" desc="결재·공지·문서" />
+          <div className="h-sub-h">
+            {me?.tenants?.[0]?.tenantSlug ?? 'Teamlet'} · 오늘도 좋은 하루 되세요
+            <span className="ping">
+              <i /> axhub 연결됨
+            </span>
+          </div>
         </div>
-
-        <footer className="flex flex-col items-center gap-1 pt-1 text-center">
-          <p className="text-xs text-[var(--fg-subtle)]">
-            Teamlet · 한국형 HR SaaS · axhub
-          </p>
-          <p className="text-[11px] text-[var(--fg-subtle)]">
-            앱 슬러그:{' '}
-            <code className="rounded bg-[var(--primary-soft)] px-1 text-[var(--primary)]">
-              {configured ? APP_SLUG : '(로컬 실행)'}
-            </code>
-          </p>
-        </footer>
       </div>
-    </main>
+
+      <div className="kpis">
+        <Link href="/members" className="kpi">
+          <span className="lbl">구성원</span>
+          <span className="val">
+            {count ?? '—'}
+            <small>명</small>
+          </span>
+          <span className="delta">회사 전체 인원</span>
+        </Link>
+        <Link href="/leave" className="kpi">
+          <span className="lbl">휴가</span>
+          <span className="val">—</span>
+          <span className="delta">곧 이식 예정</span>
+        </Link>
+        <Link href="/workflow" className="kpi">
+          <span className="lbl">결재 대기</span>
+          <span className="val">—</span>
+          <span className="delta">곧 이식 예정</span>
+        </Link>
+        <Link href="/documents" className="kpi">
+          <span className="lbl">문서·증명서</span>
+          <span className="val">—</span>
+          <span className="delta">곧 이식 예정</span>
+        </Link>
+      </div>
+
+      <div className="sec-divider">
+        바로가기 <span className="line" />
+      </div>
+      <div className="kpis" style={{ marginBottom: 0 }}>
+        <Link href="/members" className="kpi">
+          <span className="lbl">구성원 관리</span>
+          <span className="val" style={{ fontSize: 16 }}>
+            조직·인사 →
+          </span>
+        </Link>
+        <Link href="/leave" className="kpi">
+          <span className="lbl">휴가</span>
+          <span className="val" style={{ fontSize: 16 }}>
+            연차·신청 →
+          </span>
+        </Link>
+        <Link href="/workflow" className="kpi">
+          <span className="lbl">워크플로우</span>
+          <span className="val" style={{ fontSize: 16 }}>
+            결재·공지 →
+          </span>
+        </Link>
+        <Link href="/settings" className="kpi">
+          <span className="lbl">설정</span>
+          <span className="val" style={{ fontSize: 16 }}>
+            회사·개인 →
+          </span>
+        </Link>
+      </div>
+    </div>
   )
 }
-
-function Module({ title, desc, href }: { title: string; desc: string; href?: string }) {
-  const inner = (
-    <>
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-[11px] text-[var(--fg-subtle)]">{desc}</p>
-    </>
-  )
-  const cls =
-    'block rounded-xl border border-[var(--border-default)] bg-[var(--bg-content)] p-4 transition hover:border-[var(--primary)] hover:shadow-sm'
-  return href ? (
-    <Link href={href} className={cls}>
-      {inner}
-    </Link>
-  ) : (
-    <div className={cls}>{inner}</div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
- * 🤖 Claude Code / AI 에이전트 — 백엔드 호출 치트시트 (지우지 말 것)
- *
- * 화면을 깔끔히 하려고 아래 패턴들을 주석으로 내렸을 뿐, 이 앱에서 axhub 백엔드를
- * 쓸 때 그대로 쓰는 정식 패턴이다. 전부 서버에서 (Server Component / Route Handler
- * / Server Action). lib/axhub-server.ts 가 들어온 요청의 _hub_access 쿠키를 JWT 로
- * 꺼내 AxHubClient 에 박는다. 서버 전용 — 클라이언트 컴포넌트에서 import 금지
- * (next/headers). 모듈 레벨 클라이언트 캐시 금지 (사용자 자격 혼선).
- *
- * 1) 내 정보 · sdk.identity.me  (위 환영 메시지가 이 호출 결과)
- *    import { makeAxhub } from "@/lib/axhub-server";
- *    const sdk = await makeAxhub();
- *    const me = await sdk.identity.me();   // me.email, me.name, me.tenants[]
- *
- * 2) 앱 데이터 · sdk.data.discover  (스키마 자동 추론)
- *    import { makeApp } from "@/lib/axhub-server";
- *    const app = await makeApp(); // sdk.tenant(TENANT).app(APP_SLUG)
- *    const todos = await app.data.discover<{ id: string; title: string; done: boolean }>("todos");
- *    // owner-scoped 테이블(owner_column)은 무필터 list 가 내 행만 자동 반환 (SDK ≥2.1.2).
- *    // non-owner-scoped 테이블은 최소 1개 where 필수 (mass-scan guard — ValidationError)
- *    const page = await todos.list({ where: where("done").eq(false), limit: 20 });
- *    await todos.insert({ title: "할 일", done: false });
- *
- * 3) Gateway · 외부 DB/SaaS 조회  (connector 이름으로, parameterized SQL, audit log)
- *    import { queryConnector } from "@/lib/axhub-server";
- *    // connector 이름만 — UUID·tenant 스코프는 helper 가 자동 처리 (connectors.list() 로 resolve)
- *    const res = await queryConnector<{ id: number; name: string }>({
- *      connector: "my-db",           // connector 이름 (UUID 아님)
- *      path: "public/employees",     // connector 안 리소스 경로
- *      sql: "SELECT id, name FROM employees WHERE active = ? LIMIT ?",
- *      params: [true, 10],           // ✅ 항상 parameterized
- *    });
- *    // res.rows (컬럼 매핑된 객체) / res.rowCount / res.allowed (false 면 정책 deny)
- *
- * 4) Query DSL · where / and  (raw SQL 금지 · or/not 은 push 불가 → ValidationError)
- *    import { where, and, defineSchema } from "@ax-hub/sdk";
- *    const Orders = defineSchema({ table: "orders", columns: { status: "string", total: "number" }});
- *    // push 가능: top-level and + eq/ne/gt/gte/lt/lte/in/like — "A 또는 B" 는 in([...]) 으로
- *    const filter = and(where(Orders.cols.status).eq("paid"), where("priority").in(["high", "urgent"]));
- *    const page = await app.data.table(Orders).list({ where: filter, select: ["status","total"] as const, limit: 50 });
- *
- * 5) 에러 처리 · error.code 분기  (Korean message 매칭 금지)
- *    import { AxHubError, ConflictError } from "@ax-hub/sdk";
- *    try {
- *      await app.data.discover("todos").then(t => t.insert({ id: "t1" }));
- *    } catch (e) {
- *      if (e instanceof ConflictError) {  // 중복 키 처리
- *      } else if (e instanceof AxHubError) console.error(e.code, e.category, e.requestId);
- *    }
- * ───────────────────────────────────────────────────────────────────────────── */

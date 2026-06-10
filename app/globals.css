@@ -2,62 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Teamlet 디자인 토큰 — Cool Slate 팔레트 (docs/05). teamlet 모노레포에서 이식.
- *   brand   = Slate 900 단색 (그라데이션 금지 · 5원칙 #5)
- *   primary = Cool Blue 600 (포커스/링크/액센트, 템플릿 --primary 변수명 유지 → 기존 클래스 호환)
- *   surface = Slate 50 위 흰 카드, Pretendard. 다크는 prefers-color-scheme.
- * ────────────────────────────────────────────────────────────────────────── */
-:root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-soft: #eff6ff;
-  --primary-soft-hover: #dbeafe;
-
-  /* 브랜드 = Slate 900 단색 (버튼/로고/제목 강조) */
-  --brand: #0f172a;
-  --brand-hover: #1e293b;
-
-  --bg-surface: #f8fafc;  /* slate-50 */
-  --bg-content: #ffffff;
-
-  --fg-default: #0f172a;  /* slate-900 */
-  --fg-muted: #475569;    /* slate-600 */
-  --fg-subtle: #94a3b8;   /* slate-400 */
-
-  --border-default: #e2e8f0;  /* slate-200 */
-
-  --success: #22c55e;
-  --warning: #f59e0b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #60a5fa;
-    --primary-hover: #3b82f6;
-    --primary-soft: rgba(96, 165, 250, 0.18);
-    --primary-soft-hover: rgba(96, 165, 250, 0.28);
-
-    --brand: #ffffff;
-    --brand-hover: #f1f5f9;
-
-    --bg-surface: #020617;  /* slate-950 */
-    --bg-content: #0f172a;  /* slate-900 */
-
-    --fg-default: #f8fafc;
-    --fg-muted: #cbd5e1;
-    --fg-subtle: #64748b;
-
-    --border-default: rgba(255, 255, 255, 0.1);
-
-    --success: #4ade80;
-    --warning: #fbbf24;
-  }
-}
-
+/* 토큰·디자인 클래스는 ./teamlet-design.css (layout.tsx 에서 import) */
 body {
-  color: var(--fg-default);
-  background: var(--bg-surface);
-  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui,
-    "Segoe UI", Roboto, sans-serif;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
