@@ -24,7 +24,7 @@ async function loadEmployees(): Promise<Employee[] | null> {
       orderBy: [{ field: 'name', dir: 'asc' }],
       limit: 200,
     })
-    return page.items
+    return page.items ?? []
   } catch (err) {
     if (err instanceof AxHubError) {
       console.error('[axhub] employees.list failed', { code: err.code, requestId: err.requestId })

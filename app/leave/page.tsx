@@ -35,7 +35,7 @@ async function load(): Promise<{ me: MeResponse | null; requests: LeaveRow[] }> 
     const me = await (await makeAxhub()).identity.me()
     const t = await table<LeaveRow>('leave_requests')
     const page = await t.list({ where: where('employee_email').eq(me.email ?? ''), limit: 200 })
-    return { me, requests: page.items }
+    return { me, requests: page.items ?? [] }
   } catch (err) {
     if (err instanceof AxHubError) console.error('[axhub] leave load', { code: err.code })
     return { me: null, requests: [] }

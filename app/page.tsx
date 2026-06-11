@@ -58,11 +58,11 @@ async function loadAll() {
   const me = await safe<MeResponse | null>(async () => (await makeAxhub()).identity.me(), null)
   const anns = await safe<AnnRow[]>(async () => {
     const t = await table<AnnRow>('announcements')
-    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items
+    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items ?? []
   }, [])
   const recogs = await safe<RecogRow[]>(async () => {
     const t = await table<RecogRow>('recognitions')
-    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items
+    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items ?? []
   }, [])
   const count = await safe<number>(async () => {
     const t = await table<{ id: string; company_id: string }>('employees')

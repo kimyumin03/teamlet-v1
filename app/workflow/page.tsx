@@ -31,7 +31,7 @@ async function load(): Promise<Approval[]> {
   try {
     const t = await table<Approval>('approvals')
     const page = await t.list({ where: where('company_id').eq(TENANT), limit: 200 })
-    return page.items
+    return page.items ?? []
   } catch (err) {
     if (err instanceof AxHubError) console.error('[axhub] approvals', { code: err.code })
     return []
