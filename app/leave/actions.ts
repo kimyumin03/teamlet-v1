@@ -1,52 +1,14 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { makeAxhub, TENANT } from '@/lib/axhub-server'
-import { table } from '@/lib/data'
 
-type LeaveRow = {
-  id: string
-  company_id: string
-  employee_email: string
-  employee_name: string
-  leave_type: string
-  start_date: string
-  end_date: string
-  days: number
-  reason: string
-  status: string
-}
-
-function daysBetween(start: string, end: string): number {
-  const s = new Date(start)
-  const e = new Date(end)
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 1
-  return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1)
-}
-
-// 휴가 신청 — Server Action(요청 스코프, R3). 신청자 정보는 me() 에서.
+// 휴가 신청 — Server Action.
+// ⚠️ axhub SDK 는 읽기 전용: leave_requests 등 동적테이블은 axhub 가 총괄하는 마스터 데이터예요.
+//    역방향 수정(insert/update/delete) 절대 금지 — 저장은 teamlet 자체 DB(Neon) 연동 후 연결.
+//    그 전까지 axhub 에는 쓰지 않고, 폼 제출 시 목록으로 돌아가요.
 export async function requestLeave(formData: FormData): Promise<void> {
-  const leave_type = String(formData.get('leave_type') ?? '연차').trim()
-  const start_date = String(formData.get('start_date') ?? '').trim()
-  const end_date = String(formData.get('end_date') ?? start_date).trim()
-  const reason = String(formData.get('reason') ?? '').trim()
-
-  if (start_date) {
-    const me = await (await makeAxhub()).identity.me()
-    const t = await table<LeaveRow>('leave_requests')
-    await t.insert({
-      company_id: TENANT,
-      employee_email: me.email ?? '',
-      employee_name: me.name ?? me.email ?? '',
-      leave_type,
-      start_date,
-      end_date: end_date || start_date,
-      days: daysBetween(start_date, end_date || start_date),
-      reason,
-      status: '대기',
-    })
-    revalidatePath('/leave')
-  }
-  redirect('/leave')
+  // TODO(teamlet-db): leave_type / start_date / end_date / reason 를 teamlet 자체 DB 에 저장.
+  //   axhub 동적테이블(leave_requests)에는 절대 쓰지 않음.
+  void formData
+  redirect('/leave?saved=pending')
 }
