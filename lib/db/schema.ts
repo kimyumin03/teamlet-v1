@@ -284,8 +284,29 @@ export const jobPostings = pgTable('job_postings', {
   companyId: text('companyId').notNull(),
   managerId: text('managerId'),
   title: text('title').notNull(),
+  description: text('description'),
   status: text('status'), // DRAFT/OPEN/CLOSED/CANCELLED
   createdAt: timestamp('createdAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
+})
+
+// 채용 지원자
+export const candidates = pgTable('candidates', {
+  id: text('id').primaryKey(),
+  postingId: text('postingId').notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  currentStageId: text('currentStageId'),
+  result: text('result'),
+  appliedAt: timestamp('appliedAt', { mode: 'date' }),
+})
+
+// 채용 전형 단계
+export const jobStages = pgTable('job_stages', {
+  id: text('id').primaryKey(),
+  postingId: text('postingId').notNull(),
+  order: integer('order'),
+  name: text('name').notNull(),
 })
 
 // 감사 로그

@@ -50,6 +50,7 @@ export default async function RecruitPage({ searchParams }: { searchParams: Prom
               공고 {all.length}건{statusFilter && ` · 필터: ${STATUS_LABEL[statusFilter] ?? statusFilter}`}
             </p>
           </div>
+          <Link href="/recruit/new" className="btn btn-primary">공고 만들기</Link>
         </div>
       </div>
 
