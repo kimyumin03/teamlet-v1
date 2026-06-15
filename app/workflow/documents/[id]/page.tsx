@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation'
 import { asc, eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { formDocuments, approvalLines, approvalActions, documentCcRecipients, employees } from '@/lib/db/schema'
+import { getCurrentUser } from '@/lib/current-user'
+import { ApproveDocumentButtons } from '@/components/workflow/approve-document-buttons'
 
-// 결재 문서 상세 — 원본 teamlet 그대로 (읽기 전용; 승인/반려 버튼은 쓰기·권한 보류).
+// 결재 문서 상세 — 원본 teamlet 그대로. 내가 결재할 차례면 승인/반려 버튼 노출.
 export const dynamic = 'force-dynamic'
 
 const KIND_LABEL: Record<string, string> = { GENERAL: '일반', LEAVE_REQUEST: '휴가', LEAVE_PLAN: '연차 사용 계획', INFO_CHANGE: '정보변경', ANNOUNCEMENT: '공지' }
@@ -88,11 +90,19 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
   const formData = (d.formData ?? {}) as Record<string, unknown>
 
   const lines = await db
-    .select({ id: approvalLines.id, step: approvalLines.step, approverName: employees.name, status: approvalLines.status, approvedAt: approvalLines.approvedAt })
+    .select({ id: approvalLines.id, step: approvalLines.step, approverId: approvalLines.approverId, approverName: employees.name, status: approvalLines.status, approvedAt: approvalLines.approvedAt })
     .from(approvalLines)
     .leftJoin(employees, eq(approvalLines.approverId, employees.id))
     .where(eq(approvalLines.documentId, id))
     .orderBy(asc(approvalLines.step))
+
+  // 현재 사용자가 결재할 차례인 라인 (진행중 + 첫 PENDING 단계 + 본인)
+  const user = await getCurrentUser()
+  let myActionableLineId: string | null = null
+  if (d.status === 'IN_PROGRESS') {
+    const firstPending = lines.find((l) => l.status === 'PENDING')
+    if (firstPending && firstPending.approverId === user.employeeId) myActionableLineId = firstPending.id
+  }
 
   const lineIds = lines.map((l) => l.id)
   const actions = lineIds.length
@@ -124,6 +134,11 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className={`rounded-[5px] border px-2 py-0.5 font-mono text-[11px] font-semibold ${KIND_CLS[d.kind ?? ''] ?? KIND_CLS.GENERAL}`}>{KIND_LABEL[d.kind ?? ''] ?? d.kind}</span>
           <span className={`rounded-[5px] border px-2 py-0.5 font-mono text-[11px] font-semibold ${STATUS_CLS[d.status ?? ''] ?? STATUS_CLS.DRAFT}`}>{STATUS_LABEL[d.status ?? ''] ?? d.status}</span>
+          {myActionableLineId && (
+            <span className="ml-auto">
+              <ApproveDocumentButtons lineId={myActionableLineId} />
+            </span>
+          )}
         </div>
         <h1 className="h-title">{d.title}</h1>
         <p className="h-sub mt-1.5">{d.authorName ?? '—'} · {formatDateTime(d.createdAt)}</p>

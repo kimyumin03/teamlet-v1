@@ -281,140 +281,72 @@ function fmt(d: string) {
 export default async function WorkflowPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ box?: string; status?: string }>
 }) {
-  const { status: filter = 'all' } = await searchParams
-  const docs = await load()
+  const sp = await searchParams
+  const user = await getCurrentUser()
+  const [pending, myDocs, ccDocs, employeeList, templates] = await Promise.all([
+    loadPendingApprovals(user.employeeId),
+    loadMyDocuments(user.employeeId),
+    loadCcDocuments(user.employeeId),
+    loadEmployees(user.companyId, user.employeeId),
+    loadTemplates(user.companyId),
+  ])
 
-  const pending = docs.filter((d) => d.status === '대기' || d.status === '진행')
+  const inProgressCount = myDocs.filter((d) => d.status === 'IN_PROGRESS').length
   const now = new Date()
-  const doneThisMonth = docs.filter(
-    (d) =>
-      (d.status === '승인' || d.status === '반려') &&
-      new Date(d.created_at).getMonth() === now.getMonth(),
-  )
+  const doneThisMonth = myDocs.filter(
+    (d) => (d.status === 'APPROVED' || d.status === 'REJECTED') && new Date(d.createdAt).getMonth() === now.getMonth(),
+  ).length
+  const totalDocs = myDocs.length + ccDocs.length
 
-  const sorted = [...docs].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  )
-  const shown =
-    filter === 'active'
-      ? sorted.filter((d) => d.status === '대기' || d.status === '진행')
-      : filter === 'done'
-        ? sorted.filter((d) => d.status === '승인' || d.status === '반려')
-        : sorted
+  const initialBox = (sp.box === 'company' ? 'company' : 'mine') as 'mine' | 'company'
+  const initialStatus = (sp.status === 'done' ? 'done' : sp.status === 'all' ? 'all' : 'active') as 'active' | 'done' | 'all'
 
   return (
     <div className="page-body">
       <div className="page-h">
         <div>
           <h1 className="h-title">워크플로우</h1>
-          <div className="h-sub">진행 중 결재 {pending.length}건 · 전체 {docs.length}건</div>
+          <div className="h-sub">결재 대기 {pending.length}건 · 내 문서 {myDocs.length}건</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <CreateDocumentButton employees={employeeList} templates={templates} />
         </div>
       </div>
 
       <div className="kpis">
         <div className={`kpi${pending.length > 0 ? ' cta' : ''}`}>
           <span className="lbl">결재 대기</span>
-          <span className="val num">
-            {pending.length}
-            <small>건</small>
-          </span>
+          <span className="val num">{pending.length}<small>건</small></span>
           <span className="delta">{pending.length > 0 ? '처리 필요' : '처리할 결재 없음'}</span>
         </div>
         <div className="kpi">
+          <span className="lbl">진행 중</span>
+          <span className="val num">{inProgressCount}<small>건</small></span>
+          <span className="delta">내가 기안</span>
+        </div>
+        <div className="kpi">
           <span className="lbl">이번달 처리</span>
-          <span className="val num">
-            {doneThisMonth.length}
-            <small>건</small>
-          </span>
-          <span className="delta">
-            승인 {doneThisMonth.filter((d) => d.status === '승인').length} · 반려{' '}
-            {doneThisMonth.filter((d) => d.status === '반려').length}
-          </span>
+          <span className="val num">{doneThisMonth}<small>건</small></span>
+          <span className="delta">승인 · 반려</span>
         </div>
         <div className="kpi">
-          <span className="lbl">전체 문서</span>
-          <span className="val num">
-            {docs.length}
-            <small>건</small>
-          </span>
-          <span className="delta">회사 결재 문서</span>
-        </div>
-        <div className="kpi">
-          <span className="lbl">승인율</span>
-          <span className="val num">
-            {docs.length > 0
-              ? Math.round((docs.filter((d) => d.status === '승인').length / docs.length) * 100)
-              : 0}
-            <small>%</small>
-          </span>
-          <span className="delta">전체 기준</span>
+          <span className="lbl">내 문서함</span>
+          <span className="val num">{totalDocs}<small>건</small></span>
+          <span className="delta">기안 + 참조</span>
         </div>
       </div>
 
-      {/* 상태 필터 탭 */}
-      <div className="tabs">
-        <Link href="/workflow" className={`tab${filter === 'all' ? ' active' : ''}`}>
-          전체<span className="count">{docs.length}</span>
-        </Link>
-        <Link href="/workflow?status=active" className={`tab${filter === 'active' ? ' active' : ''}`}>
-          진행 중<span className="count">{pending.length}</span>
-        </Link>
-        <Link href="/workflow?status=done" className={`tab${filter === 'done' ? ' active' : ''}`}>
-          완료
-          <span className="count">{docs.length - pending.length}</span>
-        </Link>
-      </div>
-
-      {/* 문서 목록 */}
-      {shown.length === 0 ? (
-        <div
-          style={{
-            border: '1px dashed var(--border)',
-            borderRadius: 14,
-            padding: '48px 20px',
-            textAlign: 'center',
-            color: 'var(--fg-muted)',
-            fontSize: 13,
-          }}
-        >
-          해당 문서가 없어요.
-        </div>
-      ) : (
-        shown.map((d) => {
-          const kind = KIND[d.doc_kind] ?? { label: '문서', cls: '' }
-          return (
-            <div key={d.id} className={`doc${d.status === '대기' ? ' urg' : ''}`}>
-              <div className="doc-kind">
-                <span className={`k ${kind.cls}`}>{kind.label}</span>
-                <span className="d">{d.doc_no}</span>
-              </div>
-              <div className="doc-body">
-                <div className="t">{d.title}</div>
-                <div className="m">
-                  <span className="who">
-                    <span className="av-mini">{d.requester_name?.slice(-2)}</span>
-                    {d.requester_name}
-                  </span>
-                  <span className="sep">·</span>
-                  <span>{fmt(d.created_at)}</span>
-                  {d.amount && (
-                    <>
-                      <span className="sep">·</span>
-                      <span className="amt">{d.amount}</span>
-                    </>
-                  )}
-                </div>
-                <Aline status={d.status} />
-              </div>
-              <div className="doc-actions">
-                <span className={dueClass(d.status)}>{d.status}</span>
-              </div>
-            </div>
-          )
-        })
-      )}
+      <WorkflowClient
+        pending={pending}
+        myDocs={myDocs}
+        ccDocs={ccDocs}
+        employees={employeeList}
+        templates={templates}
+        initialBox={initialBox}
+        initialStatus={initialStatus}
+      />
     </div>
   )
 }
