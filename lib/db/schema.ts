@@ -2,7 +2,7 @@
 //    아래 drizzle 정의는 그 테이블을 읽고/쓰기 위한 매핑일 뿐 — 새로 만들지 않아요.
 //    🚫 drizzle-kit generate/push 금지 (스키마는 원본 teamlet 이 소유. 우린 데이터만 읽고 씀).
 //    컬럼명은 실제 DB(camelCase, Prisma)와 정확히 일치해야 해요.
-import { pgTable, text, date, numeric, timestamp, pgEnum, boolean, integer } from 'drizzle-orm/pg-core'
+import { pgTable, text, date, numeric, timestamp, pgEnum, boolean, integer, jsonb } from 'drizzle-orm/pg-core'
 
 // leave_requests.status — Prisma enum "LeaveRequestStatus"
 export const leaveRequestStatus = pgEnum('LeaveRequestStatus', [
@@ -107,7 +107,32 @@ export const formDocuments = pgTable('form_documents', {
   title: text('title').notNull(),
   kind: text('kind'), // GENERAL/LEAVE_REQUEST/LEAVE_PLAN/INFO_CHANGE/ANNOUNCEMENT
   status: text('status'), // DRAFT/IN_PROGRESS/APPROVED/REJECTED/CANCELLED
+  formData: jsonb('formData'),
   createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
+// 결재선 (문서 × 단계 × 결재자)
+export const approvalLines = pgTable('approval_lines', {
+  id: text('id').primaryKey(),
+  documentId: text('documentId').notNull(),
+  step: integer('step'),
+  approverId: text('approverId'),
+  status: text('status'), // PENDING/APPROVED/REJECTED
+  approvedAt: timestamp('approvedAt', { mode: 'date' }),
+})
+
+// 결재 액션 (코멘트 등)
+export const approvalActions = pgTable('approval_actions', {
+  id: text('id').primaryKey(),
+  lineId: text('lineId').notNull(),
+  comment: text('comment'),
+})
+
+// 문서 참조자
+export const documentCcRecipients = pgTable('document_cc_recipients', {
+  id: text('id').primaryKey(),
+  documentId: text('documentId').notNull(),
+  employeeId: text('employeeId').notNull(),
 })
 
 // 인정·피드백
