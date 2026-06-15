@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { employees, departments, positions } from '@/lib/db/schema'
@@ -53,4 +54,38 @@ export async function createEmployee(formData: FormData): Promise<void> {
   }
 
   redirect(ok ? '/members?saved=1' : '/members/new?error=db')
+}
+
+// 구성원 수정 — 이름·이메일·부서·직책을 실제 employees 에 update.
+async function resolveByName(table: typeof departments | typeof positions, companyId: string, name: string): Promise<string | null> {
+  if (!name) return null
+  const r = await getDb().select({ id: table.id }).from(table).where(and(eq(table.companyId, companyId), eq(table.name, name))).limit(1)
+  return r[0]?.id ?? null
+}
+
+export async function updateEmployee(formData: FormData): Promise<void> {
+  const user = getCurrentUser()
+  const id = String(formData.get('id') || '')
+  const name = String(formData.get('name') || '').trim()
+  const email = String(formData.get('email') || '').trim()
+  const deptName = String(formData.get('department') || '').trim()
+  const posName = String(formData.get('position') || '').trim()
+  if (!id || !name) redirect(`/members/${id}/edit?error=name`)
+
+  let ok = true
+  try {
+    const departmentId = await resolveByName(departments, user.companyId, deptName)
+    const positionId = await resolveByName(positions, user.companyId, posName)
+    await getDb()
+      .update(employees)
+      .set({ name, companyEmail: email || null, departmentId, positionId, updatedAt: new Date() })
+      .where(eq(employees.id, id))
+  } catch (err) {
+    console.error('[db] updateEmployee 실패', err)
+    ok = false
+  }
+
+  revalidatePath(`/members/${id}`)
+  revalidatePath('/members')
+  redirect(ok ? `/members/${id}` : `/members/${id}/edit?error=db`)
 }

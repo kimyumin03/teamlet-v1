@@ -170,6 +170,9 @@ export function ProfileShell({
                 </span>
               </div>
             </div>
+            <Link href={`/members/${emp.id}/edit`} className="btn btn-outline" style={{ flexShrink: 0 }}>
+              수정
+            </Link>
           </div>
         </div>
       </div>
