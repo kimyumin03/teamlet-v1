@@ -235,6 +235,29 @@ export const joinRequests = pgTable('join_requests', {
   createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
+// 증명서 발급
+export const certificateType = pgEnum('CertificateType', ['EMPLOYMENT', 'CAREER'])
+export const certificateIssues = pgTable('certificate_issues', {
+  id: text('id').primaryKey(),
+  employeeId: text('employeeId').notNull(),
+  issuerId: text('issuerId').notNull(),
+  type: certificateType('type').notNull(),
+  issueNumber: text('issueNumber').notNull(),
+  purpose: text('purpose').notNull(),
+  snapshotData: jsonb('snapshotData').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
+// 증명서 템플릿
+export const certificateTemplates = pgTable('certificate_templates', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  name: text('name').notNull(),
+  certType: text('certType'),
+  isActive: boolean('isActive'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
 // 공용 문서함
 export const companyDocuments = pgTable('company_documents', {
   id: text('id').primaryKey(),
