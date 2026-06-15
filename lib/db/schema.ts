@@ -59,6 +59,7 @@ export const employees = pgTable('employees', {
   resignedAt: timestamp('resignedAt', { mode: 'date' }),
   isActive: boolean('isActive'),
   createdAt: timestamp('createdAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 // 인사 발령 이력 (denormalized — from/to 부서·직책 이름 포함)

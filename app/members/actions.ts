@@ -1,26 +1,56 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { and, eq } from 'drizzle-orm'
+import { getDb } from '@/lib/db'
+import { employees, departments, positions } from '@/lib/db/schema'
+import { getCurrentUser } from '@/lib/current-user'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
-// 구성원 추가 — Server Action.
-// ⚠️ axhub SDK 는 읽기 전용: employees 동적테이블은 axhub 가 총괄하는 마스터 데이터예요.
-//    역방향 수정(insert/update/delete) 절대 금지 — 저장은 teamlet 자체 DB(Neon) 연동 후 연결.
-
-// useActionState 용 (인라인 결과 표시). 자체 DB 연동 전까지 저장 비활성.
+// (useActionState 경로는 미사용 — 폼은 createEmployee 를 직접 써요)
 export async function addEmployee(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   void formData
-  return {
-    ok: false,
-    error: '구성원 저장은 teamlet 자체 DB 연동 후 제공돼요. (axhub 마스터 데이터에는 쓰지 않습니다)',
-  }
+  return { ok: false, error: '이 경로는 사용하지 않아요.' }
 }
 
-// 폼 직접 제출용 (server component <form action>).
+// 구성원 추가 — 자체 DB(Neon)의 실제 employees 에 insert.
+// 필수: id·companyId·name·updatedAt. 나머지(employmentType/Status·dataSource·isActive·createdAt)는 DB 기본값.
+// 부서/직책은 입력한 "이름"이 기존 부서/직책과 일치하면 자동 연결, 아니면 미배정.
 export async function createEmployee(formData: FormData): Promise<void> {
-  // TODO(teamlet-db): name / email / department / position / status 를 teamlet 자체 DB 에 저장.
-  //   axhub 동적테이블(employees)에는 절대 쓰지 않음.
-  void formData
-  redirect('/members?saved=pending')
+  const user = getCurrentUser()
+  const name = String(formData.get('name') || '').trim()
+  const email = String(formData.get('email') || '').trim()
+  const deptName = String(formData.get('department') || '').trim()
+  const posName = String(formData.get('position') || '').trim()
+  if (!name) redirect('/members/new?error=name')
+
+  let ok = true
+  try {
+    const db = getDb()
+    let departmentId: string | null = null
+    let positionId: string | null = null
+    if (deptName) {
+      const d = await db.select({ id: departments.id }).from(departments).where(and(eq(departments.companyId, user.companyId), eq(departments.name, deptName))).limit(1)
+      departmentId = d[0]?.id ?? null
+    }
+    if (posName) {
+      const p = await db.select({ id: positions.id }).from(positions).where(and(eq(positions.companyId, user.companyId), eq(positions.name, posName))).limit(1)
+      positionId = p[0]?.id ?? null
+    }
+    await db.insert(employees).values({
+      id: crypto.randomUUID(),
+      companyId: user.companyId,
+      name,
+      companyEmail: email || null,
+      departmentId,
+      positionId,
+      updatedAt: new Date(),
+    })
+  } catch (err) {
+    console.error('[db] createEmployee 실패', err)
+    ok = false
+  }
+
+  redirect(ok ? '/members?saved=1' : '/members/new?error=db')
 }
