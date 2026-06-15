@@ -396,3 +396,13 @@ export const userRoles = pgTable('user_roles', {
   roleId: text('roleId').notNull(),
   isActive: boolean('isActive'),
 })
+
+// 권한 카탈로그 (읽기 전용 — id↔key 매핑용)
+export const permissions = pgTable('permissions', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull(),
+  category: text('category'),
+  domain: text('domain'),
+  action: text('action'),
+  name: text('name'),
+})

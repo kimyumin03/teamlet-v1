@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 // teamlet 디자인(design.css)의 .side / .nav-item / .me 클래스 사용.
-// 인사관리 그룹은 권한 연동 전이라 일단 전체 노출 (추후 me 권한으로 게이트).
+// 인사관리 그룹은 member.directory.manage 권한(최고관리자/HR관리자)을 가진 사용자에게만 노출.
 
 type NavItem = { href: string; label: string; icon: keyof typeof ICON }
 
@@ -16,6 +16,7 @@ const NAV_WORKSPACE: NavItem[] = [
 const NAV_ADMIN: NavItem[] = [
   { href: '/members', label: '구성원', icon: 'users' },
   { href: '/workflow', label: '워크플로우', icon: 'workflow' },
+  { href: '/hr/leave', label: '휴가 관리', icon: 'calendar' },
 ]
 const NAV_SETTINGS: NavItem[] = [{ href: '/settings', label: '설정', icon: 'settings' }]
 
@@ -23,10 +24,14 @@ export function Sidebar({
   userName,
   userEmail,
   companyName,
+  employeeId,
+  isAdmin = false,
 }: {
   userName: string
   userEmail: string
   companyName: string
+  employeeId?: string
+  isAdmin?: boolean
 }) {
   const pathname = usePathname()
   const isActive = (href: string) =>
@@ -55,10 +60,15 @@ export function Sidebar({
         {NAV_WORKSPACE.map(item)}
       </div>
 
-      <div className="nav-group">
-        <div className="nav-label">인사 관리</div>
-        {NAV_ADMIN.map(item)}
-      </div>
+      {isAdmin && (
+        <div className="nav-group">
+          <div className="nav-label admin">
+            인사 관리
+            <span className="nav-admin-tag" title="인사 관리자 권한">관리자</span>
+          </div>
+          {NAV_ADMIN.map(item)}
+        </div>
+      )}
 
       <div className="nav-group">
         <div className="nav-label">설정</div>
@@ -67,11 +77,23 @@ export function Sidebar({
 
       {/* 내 계정 */}
       <div className="me">
-        <div className="av">{(userName || userEmail || '?').trim().charAt(0).toUpperCase()}</div>
-        <div className="meta">
-          <div className="name">{userName || '게스트'}</div>
-          <div className="role">{userEmail || '로그인 필요'}</div>
-        </div>
+        {employeeId ? (
+          <Link href={`/members/${employeeId}`} style={{ display: 'contents' }}>
+            <div className="av" style={{ cursor: 'pointer' }}>{(userName || userEmail || '?').trim().charAt(0).toUpperCase()}</div>
+            <div className="meta" style={{ cursor: 'pointer' }}>
+              <div className="name">{userName || '게스트'}</div>
+              <div className="role">{userEmail || (isAdmin ? '인사 관리자' : '구성원')}</div>
+            </div>
+          </Link>
+        ) : (
+          <>
+            <div className="av">{(userName || userEmail || '?').trim().charAt(0).toUpperCase()}</div>
+            <div className="meta">
+              <div className="name">{userName || '게스트'}</div>
+              <div className="role">{userEmail || '로그인 필요'}</div>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   )

@@ -11,10 +11,11 @@ import { users, userCompanyMemberships } from './db/schema'
 
 export type CurrentUser = { employeeId: string; name: string; companyId: string }
 
-// 데모 기본값 (로컬·미인증·매핑 실패 시 폴백). 김민준 / 회사 cmq7v3cyy...
+// 데모 기본값 (로컬·미인증·매핑 실패 시 폴백). 김관리(최고관리자) / 회사 cmq7v3cyy...
+// 최고관리자로 폴백해야 로컬에서처럼 인사관리(관리자 전용) 메뉴/기능이 모두 보여요.
 const DEMO: CurrentUser = {
-  employeeId: 'cmq7v3e96001mwer06ubk0vtc',
-  name: '김민준',
+  employeeId: 'cmq7v3dsr001ewer0sppw0php',
+  name: '김관리',
   companyId: 'cmq7v3cyy000swer045bbwytj',
 }
 

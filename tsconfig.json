@@ -20,7 +20,9 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@teamlet/ui": ["./components/ui/index.ts"]
+      "@teamlet/ui": ["./components/ui/index.ts"],
+      "@teamlet/shared": ["./lib/shared/index.ts"],
+      "@teamlet/modules/*": ["./lib/modules/*"]
     }
   },
   "include": [

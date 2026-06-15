@@ -3,6 +3,7 @@ import './globals.css'
 import './teamlet-design.css'
 import { eq } from 'drizzle-orm'
 import { getCurrentUser } from '@/lib/current-user'
+import { isHrAdmin } from '@/lib/permissions'
 import { getDb } from '@/lib/db'
 import { companies } from '@/lib/db/schema'
 import { Sidebar } from './_components/sidebar'
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 }
 
 // 사이드바 표시용 — 실제 로그인 사용자(getCurrentUser, axhub me 연동) 이름 + 회사명.
-async function loadMe(): Promise<{ name: string; email: string; companyName: string } | null> {
+async function loadMe(): Promise<{ name: string; email: string; companyName: string; employeeId: string; isAdmin: boolean } | null> {
   try {
     const u = await getCurrentUser()
     let companyName = 'Teamlet'
@@ -21,7 +22,11 @@ async function loadMe(): Promise<{ name: string; email: string; companyName: str
       const c = await getDb().select({ name: companies.name }).from(companies).where(eq(companies.id, u.companyId)).limit(1)
       if (c[0]?.name) companyName = c[0].name
     } catch {}
-    return { name: u.name, email: '', companyName }
+    let isAdmin = false
+    try {
+      isAdmin = await isHrAdmin(u.employeeId)
+    } catch {}
+    return { name: u.name, email: '', companyName, employeeId: u.employeeId, isAdmin }
   } catch {
     return null
   }
@@ -45,6 +50,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             userName={me?.name ?? ''}
             userEmail={me?.email ?? ''}
             companyName={me?.companyName ?? 'Teamlet'}
+            employeeId={me?.employeeId}
+            isAdmin={me?.isAdmin ?? false}
           />
           <div className="main">
             <header className="topbar">
