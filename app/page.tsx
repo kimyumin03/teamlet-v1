@@ -168,6 +168,9 @@ export default async function HomePage({
             <Link href="/announcements/new" className="btn-sm">
               공지 작성
             </Link>
+            <Link href="/recognitions/new" className="btn-sm btn-sm-ghost">
+              인정 보내기
+            </Link>
           </div>
         </div>
 
