@@ -182,6 +182,32 @@ export const userCompanyMemberships = pgTable('user_company_memberships', {
   employeeId: text('employeeId'),
 })
 
+// 역할-권한 매핑
+export const rolePermissions = pgTable('role_permissions', {
+  id: text('id').primaryKey(),
+  roleId: text('roleId').notNull(),
+  permissionId: text('permissionId').notNull(),
+  enabled: boolean('enabled'),
+})
+
+// 휴가 정책 (우리가 쓰는 컬럼만)
+export const leavePolicies = pgTable('leave_policies', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  name: text('name').notNull(),
+  leaveTypeId: text('leaveTypeId'),
+  isDefault: boolean('isDefault'),
+  isActive: boolean('isActive'),
+})
+
+// 회사 보안 정책 (우리가 쓰는 컬럼만)
+export const companySecurityPolicies = pgTable('company_security_policies', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  mfaEnabled: boolean('mfaEnabled'),
+  ipRestrictionEnabled: boolean('ipRestrictionEnabled'),
+})
+
 // 공용 문서함
 export const companyDocuments = pgTable('company_documents', {
   id: text('id').primaryKey(),

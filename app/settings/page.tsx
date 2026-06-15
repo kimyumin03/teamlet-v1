@@ -64,6 +64,9 @@ export default async function SettingsPage() {
         <Link href="/settings/org" className="btn btn-outline">조직 관리</Link>
         <Link href="/settings/holidays" className="btn btn-outline">공휴일 관리</Link>
         <Link href="/settings/leave-types" className="btn btn-outline">휴가 종류</Link>
+        <Link href="/settings/leave-policies" className="btn btn-outline">휴가 정책</Link>
+        <Link href="/settings/permissions" className="btn btn-outline">권한</Link>
+        <Link href="/settings/security" className="btn btn-outline">보안</Link>
       </div>
 
       {/* 부서 */}
