@@ -1,12 +1,19 @@
 import Link from 'next/link'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
-import { employees, departments, positions, roles, userRoles } from '@/lib/db/schema'
+import { employees, departments, positions, roles, userRoles, userCompanyMemberships, users } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
+import { hasPermission } from '@/lib/permissions'
 import { DepartmentSidebar, type DepartmentNode } from './_components/department-sidebar'
 import { OrgTree } from './_components/org-tree'
 import { AddMemberButton } from './_components/add-member-button'
 import { MembersFilterBar } from './_components/members-filter-bar'
+import { AddDepartmentButton } from '@/components/members/add-department-button'
+import { AddPositionButton } from '@/components/members/add-position-button'
+import { PendingJoinPanel } from '@/components/members/pending-join-panel'
+import { CsvImportButton } from '@/components/members/csv-import-button'
+import type { DepartmentNode as DepartmentNodeFull } from '@teamlet/modules/department'
+import type { PendingMemberItem } from '@teamlet/modules/tenancy'
 
 // 구성원 디렉토리 — 원본 teamlet 그대로. 데이터는 자체 DB(Neon)의 실제 employees.
 export const dynamic = 'force-dynamic'
@@ -128,6 +135,42 @@ export default async function MembersPage({
     .from(positions)
     .where(and(eq(positions.companyId, user.companyId), eq(positions.isActive, true)))
 
+  // 관리자(member.directory.manage) 만 부서/직책/CSV/대기 가입 패널 노출 (원본 동작)
+  const canManage = await hasPermission(user.employeeId, 'member.directory.manage')
+
+  // AddDepartmentButton·RegisterAppointmentButton 가 쓰는 모듈 DepartmentNode 형태(isActive 포함)
+  const deptNodesFull: DepartmentNodeFull[] = depts.map((d) => ({
+    id: d.id,
+    name: d.name,
+    parentId: d.parentId,
+    sortOrder: d.sortOrder,
+    isActive: true,
+    memberCount: d.memberCount,
+  }))
+
+  // 대기 중인 가입 신청 — user_company_memberships 에 employeeId 미연결(가입 신청 상태) 건을 사용자 정보와 조인.
+  // ⚠️ status 컬럼이 schema 에 없어 "employeeId IS NULL" 을 대기 신호로 사용 (근사). missingSchemaColumns 참고.
+  let pendingMembers: PendingMemberItem[] = []
+  if (canManage) {
+    const pendRows = await getDb()
+      .select({
+        membershipId: userCompanyMemberships.id,
+        userId: userCompanyMemberships.userId,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(userCompanyMemberships)
+      .innerJoin(users, eq(users.id, userCompanyMemberships.userId))
+      .where(and(eq(userCompanyMemberships.companyId, user.companyId), isNull(userCompanyMemberships.employeeId)))
+    pendingMembers = pendRows.map((p) => ({
+      membershipId: p.membershipId,
+      userId: p.userId,
+      userName: p.userName ?? '사용자',
+      userEmail: p.userEmail ?? '',
+      requestedAt: new Date(),
+    }))
+  }
+
   // 헤더 요약 통계
   const employedCount = allEmployees.filter(
     (e) => e.employmentStatus === 'ACTIVE' || e.employmentStatus === 'PROBATION' || e.employmentStatus === 'SECONDED',
@@ -170,6 +213,13 @@ export default async function MembersPage({
       />
 
       <div className="mbr-main">
+        {/* 대기 중인 가입 신청 (관리자) */}
+        {canManage && pendingMembers.length > 0 && (
+          <div className="shrink-0">
+            <PendingJoinPanel items={pendingMembers} />
+          </div>
+        )}
+
         {/* 헤더 */}
         <div className="shrink-0 px-8 pt-7 pb-3">
           <div className="page-h" style={{ marginBottom: 0 }}>
@@ -193,6 +243,9 @@ export default async function MembersPage({
                   조직도
                 </Link>
               </div>
+              {canManage && <CsvImportButton />}
+              {canManage && <AddPositionButton />}
+              {canManage && <AddDepartmentButton departments={deptNodesFull} />}
               <AddMemberButton
                 departments={depts}
                 positions={posList}

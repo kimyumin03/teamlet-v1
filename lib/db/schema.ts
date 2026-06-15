@@ -67,13 +67,18 @@ export const appointments = pgTable('appointments', {
   id: text('id').primaryKey(),
   companyId: text('companyId').notNull(),
   employeeId: text('employeeId').notNull(),
-  kind: text('kind'), // HIRE/TRANSFER/PROMOTION/LEAVE/RETURN/SECONDMENT/RESIGNATION
+  kind: text('kind'), // HIRE/TRANSFER/PROMOTION/POSITION_CHANGE/REASSIGN
   effectiveDate: timestamp('effectiveDate', { mode: 'date' }),
+  fromDepartmentId: text('fromDepartmentId'),
   fromDepartmentName: text('fromDepartmentName'),
+  toDepartmentId: text('toDepartmentId'),
   toDepartmentName: text('toDepartmentName'),
+  fromPositionId: text('fromPositionId'),
   fromPositionName: text('fromPositionName'),
+  toPositionId: text('toPositionId'),
   toPositionName: text('toPositionName'),
   memo: text('memo'),
+  appointedById: text('appointedById'),
   appointedByName: text('appointedByName'),
   createdAt: timestamp('createdAt', { mode: 'date' }),
 })
@@ -87,6 +92,8 @@ export const leaveBalances = pgTable('leave_balances', {
   grantedDays: numeric('grantedDays'),
   usedDays: numeric('usedDays'),
   adjustedDays: numeric('adjustedDays'),
+  expiryProcessedAt: timestamp('expiryProcessedAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).notNull(), // 기본값 없음 → 신규 행 insert 시 직접
 })
 
 // 공지사항
@@ -105,12 +112,14 @@ export const announcements = pgTable('announcements', {
 export const formDocuments = pgTable('form_documents', {
   id: text('id').primaryKey(),
   companyId: text('companyId').notNull(),
+  templateId: text('templateId'),
   authorId: text('authorId'),
   title: text('title').notNull(),
   kind: text('kind'), // GENERAL/LEAVE_REQUEST/LEAVE_PLAN/INFO_CHANGE/ANNOUNCEMENT
   status: text('status'), // DRAFT/IN_PROGRESS/APPROVED/REJECTED/CANCELLED
   formData: jsonb('formData'),
   createdAt: timestamp('createdAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).notNull(), // 기본값 없음 → insert 시 직접
 })
 
 // 결재선 (문서 × 단계 × 결재자)
@@ -119,15 +128,20 @@ export const approvalLines = pgTable('approval_lines', {
   documentId: text('documentId').notNull(),
   step: integer('step'),
   approverId: text('approverId'),
-  status: text('status'), // PENDING/APPROVED/REJECTED
+  status: text('status'), // PENDING/APPROVED/REJECTED/SKIPPED
   approvedAt: timestamp('approvedAt', { mode: 'date' }),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 결재 액션 (코멘트 등)
 export const approvalActions = pgTable('approval_actions', {
   id: text('id').primaryKey(),
+  documentId: text('documentId').notNull(),
   lineId: text('lineId').notNull(),
+  actorId: text('actorId'),
+  action: text('action'), // APPROVE/REJECT/DELEGATE/CANCEL
   comment: text('comment'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 문서 참조자
@@ -135,6 +149,7 @@ export const documentCcRecipients = pgTable('document_cc_recipients', {
   id: text('id').primaryKey(),
   documentId: text('documentId').notNull(),
   employeeId: text('employeeId').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 인정·피드백
@@ -223,7 +238,11 @@ export const formTemplates = pgTable('form_templates', {
   companyId: text('companyId').notNull(),
   name: text('name').notNull(),
   kind: text('kind'),
+  description: text('description'),
+  fields: jsonb('fields'),
   isActive: boolean('isActive'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 // 회사 가입 신청
@@ -318,6 +337,9 @@ export const careerHistories = pgTable('career_histories', {
   department: text('department'),
   startDate: timestamp('startDate', { mode: 'date' }),
   endDate: timestamp('endDate', { mode: 'date' }),
+  description: text('description'),
+  sortOrder: integer('sortOrder'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 학력
@@ -329,6 +351,9 @@ export const educationHistories = pgTable('education_histories', {
   degree: text('degree'),
   enrollDate: timestamp('enrollDate', { mode: 'date' }),
   graduateDate: timestamp('graduateDate', { mode: 'date' }),
+  description: text('description'),
+  sortOrder: integer('sortOrder'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 가족
@@ -337,7 +362,11 @@ export const familyMembers = pgTable('family_members', {
   employeeId: text('employeeId').notNull(),
   name: text('name').notNull(),
   relationship: text('relationship').notNull(),
+  birthDate: timestamp('birthDate', { mode: 'date' }),
   isDependent: boolean('isDependent'),
+  gender: text('gender'),
+  sortOrder: integer('sortOrder'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
 })
 
 // 회사 등록 신청 (플랫폼 관리자 심사)
