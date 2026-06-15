@@ -59,9 +59,11 @@ export default async function SettingsPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        <Link href="/settings/profile" className="btn btn-outline">내 프로필</Link>
         <Link href="/settings/company" className="btn btn-outline">회사 정보 수정</Link>
         <Link href="/settings/org" className="btn btn-outline">조직 관리</Link>
         <Link href="/settings/holidays" className="btn btn-outline">공휴일 관리</Link>
+        <Link href="/settings/leave-types" className="btn btn-outline">휴가 종류</Link>
       </div>
 
       {/* 부서 */}
