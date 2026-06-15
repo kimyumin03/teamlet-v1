@@ -340,6 +340,17 @@ export const familyMembers = pgTable('family_members', {
   isDependent: boolean('isDependent'),
 })
 
+// 회사 등록 신청 (플랫폼 관리자 심사)
+export const companyApplications = pgTable('company_applications', {
+  id: text('id').primaryKey(),
+  companyName: text('companyName'),
+  representativeName: text('representativeName'),
+  contact: text('contact'),
+  industry: text('industry'),
+  status: text('status'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
 // 감사 로그
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),
