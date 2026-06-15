@@ -309,6 +309,37 @@ export const jobStages = pgTable('job_stages', {
   name: text('name').notNull(),
 })
 
+// 경력
+export const careerHistories = pgTable('career_histories', {
+  id: text('id').primaryKey(),
+  employeeId: text('employeeId').notNull(),
+  companyName: text('companyName').notNull(),
+  position: text('position').notNull(),
+  department: text('department'),
+  startDate: timestamp('startDate', { mode: 'date' }),
+  endDate: timestamp('endDate', { mode: 'date' }),
+})
+
+// 학력
+export const educationHistories = pgTable('education_histories', {
+  id: text('id').primaryKey(),
+  employeeId: text('employeeId').notNull(),
+  schoolName: text('schoolName').notNull(),
+  major: text('major'),
+  degree: text('degree'),
+  enrollDate: timestamp('enrollDate', { mode: 'date' }),
+  graduateDate: timestamp('graduateDate', { mode: 'date' }),
+})
+
+// 가족
+export const familyMembers = pgTable('family_members', {
+  id: text('id').primaryKey(),
+  employeeId: text('employeeId').notNull(),
+  name: text('name').notNull(),
+  relationship: text('relationship').notNull(),
+  isDependent: boolean('isDependent'),
+})
+
 // 감사 로그
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey(),

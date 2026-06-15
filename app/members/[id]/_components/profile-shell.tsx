@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { addCareer, addEducation, addFamily } from '../actions'
 
 // 원본 teamlet ProfileShell 그대로 이식 (디자인·마크업 유지).
 // ⚠️ 쓰기/권한 기능(수정·비활성·초대·발령등록·권한관리)은 로그인·권한 보류라
@@ -124,9 +125,9 @@ export function ProfileShell({
   appointments: AppointmentItem[]
   leaveHistory: LeaveRequestItem[]
   workflowDocs: DocumentListItem[]
-  careerItems: unknown[]
-  educationItems: unknown[]
-  familyItems: unknown[]
+  careerItems: { id: string; companyName: string; position: string; startDate: Date | null }[]
+  educationItems: { id: string; schoolName: string; major: string | null; enrollDate: Date | null }[]
+  familyItems: { id: string; name: string; relationship: string }[]
   initialTab: TabKey
 }) {
   const [tab, setTab] = useState<TabKey>(initialTab)
@@ -282,11 +283,69 @@ export function ProfileShell({
             </Accordion>
 
             <Accordion title="경력 · 학력" count={careerItems.length + educationItems.length}>
-              <EmptyLine text="등록된 경력·학력이 없어요." />
+              <div style={{ paddingTop: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-muted)', marginBottom: 8 }}>경력</div>
+                {careerItems.length === 0 ? (
+                  <EmptyLine text="등록된 경력이 없어요." />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                    {careerItems.map((c) => (
+                      <div key={c.id} style={{ fontSize: 13 }}>
+                        <b>{c.companyName}</b> · {c.position}{' '}
+                        <span style={{ color: 'var(--fg-subtle)', fontSize: 11.5 }}>{c.startDate ? new Date(c.startDate).toLocaleDateString('ko-KR') : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <form action={addCareer} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <input type="hidden" name="employeeId" value={emp.id} />
+                  <input name="companyName" required placeholder="회사명" className="ctl-in" style={{ maxWidth: 140 }} />
+                  <input name="position" required placeholder="직책" className="ctl-in" style={{ maxWidth: 110 }} />
+                  <input name="startDate" type="date" className="ctl-in" style={{ maxWidth: 150 }} />
+                  <button type="submit" className="btn btn-outline">경력 추가</button>
+                </form>
+
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-muted)', margin: '8px 0' }}>학력</div>
+                {educationItems.length === 0 ? (
+                  <EmptyLine text="등록된 학력이 없어요." />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                    {educationItems.map((ed) => (
+                      <div key={ed.id} style={{ fontSize: 13 }}>
+                        <b>{ed.schoolName}</b>{ed.major ? ` · ${ed.major}` : ''}{' '}
+                        <span style={{ color: 'var(--fg-subtle)', fontSize: 11.5 }}>{ed.enrollDate ? new Date(ed.enrollDate).toLocaleDateString('ko-KR') : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <form action={addEducation} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <input type="hidden" name="employeeId" value={emp.id} />
+                  <input name="schoolName" required placeholder="학교명" className="ctl-in" style={{ maxWidth: 140 }} />
+                  <input name="major" placeholder="전공" className="ctl-in" style={{ maxWidth: 110 }} />
+                  <input name="enrollDate" type="date" className="ctl-in" style={{ maxWidth: 150 }} />
+                  <button type="submit" className="btn btn-outline">학력 추가</button>
+                </form>
+              </div>
             </Accordion>
 
             <Accordion title="가족 정보" count={familyItems.length}>
-              <EmptyLine text="등록된 가족 정보가 없어요." />
+              <div style={{ paddingTop: 14 }}>
+                {familyItems.length === 0 ? (
+                  <EmptyLine text="등록된 가족 정보가 없어요." />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                    {familyItems.map((f) => (
+                      <div key={f.id} style={{ fontSize: 13 }}><b>{f.name}</b> · {f.relationship}</div>
+                    ))}
+                  </div>
+                )}
+                <form action={addFamily} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <input type="hidden" name="employeeId" value={emp.id} />
+                  <input name="name" required placeholder="이름" className="ctl-in" style={{ maxWidth: 120 }} />
+                  <input name="relationship" required placeholder="관계 (예: 배우자)" className="ctl-in" style={{ maxWidth: 150 }} />
+                  <button type="submit" className="btn btn-outline">가족 추가</button>
+                </form>
+              </div>
             </Accordion>
           </div>
         )}

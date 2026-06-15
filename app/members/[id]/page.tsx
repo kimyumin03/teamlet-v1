@@ -11,6 +11,9 @@ import {
   roles,
   appointments,
   leaveRequests,
+  careerHistories,
+  educationHistories,
+  familyMembers,
 } from '@/lib/db/schema'
 import { ProfileShell } from './_components/profile-shell'
 
@@ -131,6 +134,19 @@ export default async function MemberDetailPage({
     status: r.status,
   }))
 
+  const careerItems = await db
+    .select({ id: careerHistories.id, companyName: careerHistories.companyName, position: careerHistories.position, startDate: careerHistories.startDate })
+    .from(careerHistories)
+    .where(eq(careerHistories.employeeId, id))
+  const educationItems = await db
+    .select({ id: educationHistories.id, schoolName: educationHistories.schoolName, major: educationHistories.major, enrollDate: educationHistories.enrollDate })
+    .from(educationHistories)
+    .where(eq(educationHistories.employeeId, id))
+  const familyItems = await db
+    .select({ id: familyMembers.id, name: familyMembers.name, relationship: familyMembers.relationship })
+    .from(familyMembers)
+    .where(eq(familyMembers.employeeId, id))
+
   const emp = {
     id: e.id,
     name: e.name,
@@ -162,9 +178,9 @@ export default async function MemberDetailPage({
       appointments={apptItems}
       leaveHistory={leaveHistory}
       workflowDocs={[]} // 결재 문서 — workflow 기능 이식 때 연결
-      careerItems={[]}
-      educationItems={[]}
-      familyItems={[]}
+      careerItems={careerItems}
+      educationItems={educationItems}
+      familyItems={familyItems}
       initialTab={initialTab}
     />
   )
