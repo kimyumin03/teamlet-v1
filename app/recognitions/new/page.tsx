@@ -9,7 +9,7 @@ import { sendRecognition } from '../actions'
 export const dynamic = 'force-dynamic'
 
 export default async function NewRecognitionPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let people: { id: string; name: string }[] = []
   try {
     people = await getDb()

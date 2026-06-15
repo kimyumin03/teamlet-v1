@@ -19,7 +19,7 @@ export async function addEmployee(_prev: ActionResult | null, formData: FormData
 // 필수: id·companyId·name·updatedAt. 나머지(employmentType/Status·dataSource·isActive·createdAt)는 DB 기본값.
 // 부서/직책은 입력한 "이름"이 기존 부서/직책과 일치하면 자동 연결, 아니면 미배정.
 export async function createEmployee(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const name = String(formData.get('name') || '').trim()
   const email = String(formData.get('email') || '').trim()
   const deptName = String(formData.get('department') || '').trim()
@@ -64,7 +64,7 @@ async function resolveByName(table: typeof departments | typeof positions, compa
 }
 
 export async function updateEmployee(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const id = String(formData.get('id') || '')
   const name = String(formData.get('name') || '').trim()
   const email = String(formData.get('email') || '').trim()

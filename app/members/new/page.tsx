@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createEmployee } from '../actions'
 
+export const dynamic = 'force-dynamic'
+
 // 구성원 추가 — server component 폼. createEmployee Server Action 으로 직접 제출(R3).
 export default function NewMemberPage() {
   return (

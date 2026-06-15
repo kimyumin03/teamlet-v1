@@ -34,7 +34,7 @@ export default async function LeaveCalendarPage({
 }: {
   searchParams: Promise<{ year?: string; month?: string }>
 }) {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const params = await searchParams
   const now = new Date()
   const year = parseInt(params.year ?? String(now.getFullYear()), 10)

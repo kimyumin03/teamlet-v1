@@ -9,7 +9,7 @@ import { addHoliday } from './actions'
 export const dynamic = 'force-dynamic'
 
 export default async function HolidaysSettingsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let holidays: { id: string; date: string | null; name: string }[] = []
   try {
     holidays = await getDb()

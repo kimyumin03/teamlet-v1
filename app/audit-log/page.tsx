@@ -47,7 +47,7 @@ export default async function AuditLogPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string; type?: string; event?: string }>
 }) {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? '1'))
   const q = params.q?.trim() ?? ''

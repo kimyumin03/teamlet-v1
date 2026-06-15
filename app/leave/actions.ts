@@ -24,7 +24,7 @@ function diffDays(start: string, end: string): number {
 }
 
 export async function requestLeave(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const typeLabel = String(formData.get('leave_type') || '연차')
   const key = TYPE_KEY[typeLabel] ?? 'annual'
   const startDate = String(formData.get('start_date') || '')

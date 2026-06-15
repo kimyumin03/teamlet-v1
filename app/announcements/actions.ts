@@ -8,7 +8,7 @@ import { getCurrentUser } from '@/lib/current-user'
 
 // 공지 작성 — 자체 DB(Neon)의 실제 announcements 에 insert. 홈 피드에 바로 떠요.
 export async function postAnnouncement(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const title = String(formData.get('title') || '').trim()
   const content = String(formData.get('content') || '').trim()
   if (!title || !content) redirect('/announcements/new?error=empty')

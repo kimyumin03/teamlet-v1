@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { postAnnouncement } from '../actions'
 
+export const dynamic = 'force-dynamic'
+
 // 공지 작성 폼 — server component, postAnnouncement Server Action 으로 직접 제출.
 export default function NewAnnouncementPage() {
   return (

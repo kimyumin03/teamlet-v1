@@ -23,7 +23,7 @@ const STATUS_TABS = [
 
 export default async function RecruitPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status: statusFilter = '' } = await searchParams
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
 
   let all: { id: string; title: string; managerName: string | null; status: string }[] = []
   try {

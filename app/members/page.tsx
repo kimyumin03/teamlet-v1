@@ -119,7 +119,7 @@ export default async function MembersPage({
   const empTypeFilter = params.empType ?? ''
   const view = params.view === 'org' ? 'org' : 'list'
 
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const { emps: allEmployees, depts } = await loadMembers(user.companyId)
 
   // 헤더 요약 통계

@@ -14,7 +14,7 @@ function formatDate(d: string | null): string {
 }
 
 export default async function LeaveRequestsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let requests: {
     id: string
     employeeName: string

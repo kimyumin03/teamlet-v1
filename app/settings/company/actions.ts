@@ -9,7 +9,7 @@ import { getCurrentUser } from '@/lib/current-user'
 
 // 회사 정보 수정 — companies update.
 export async function updateCompany(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const name = String(formData.get('name') || '').trim()
   const businessNumber = String(formData.get('businessNumber') || '').trim()
   const phone = String(formData.get('phone') || '').trim()

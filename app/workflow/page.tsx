@@ -34,7 +34,7 @@ const STATUS_KO: Record<string, string> = {
 }
 
 async function load(): Promise<Approval[]> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   try {
     const db = getDb()
     const rows = await db

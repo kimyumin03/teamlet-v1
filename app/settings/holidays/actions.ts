@@ -8,7 +8,7 @@ import { getCurrentUser } from '@/lib/current-user'
 
 // 공휴일 추가 — company_holidays insert (id/companyId/date/name, isNational=false).
 export async function addHoliday(formData: FormData): Promise<void> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   const date = String(formData.get('date') || '')
   const name = String(formData.get('name') || '').trim()
   if (!date || !name) redirect('/settings/holidays?error=empty')

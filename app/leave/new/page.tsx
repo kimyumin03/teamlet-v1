@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requestLeave } from '../actions'
 
+export const dynamic = 'force-dynamic'
+
 // 휴가 신청 폼 — teamlet apply-card 디자인. createEmployee 와 동일 패턴(server action).
 export default function NewLeavePage() {
   return (

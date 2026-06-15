@@ -9,7 +9,7 @@ import { updateCompany } from './actions'
 export const dynamic = 'force-dynamic'
 
 export default async function CompanySettingsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let c: { name: string; businessNumber: string | null; phone: string | null; addressRoad: string | null; addressDetail: string | null } = {
     name: '',
     businessNumber: null,

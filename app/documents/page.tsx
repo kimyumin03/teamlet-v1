@@ -11,7 +11,7 @@ const CATEGORY_LABEL: Record<string, string> = { GENERAL: '일반', NOTICE: '공
 const CATEGORY_TAG: Record<string, string> = { GENERAL: 'tag', NOTICE: 'tag warn', POLICY: 'tag wfh' }
 
 export default async function DocumentsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let docs: { id: string; category: string | null; title: string; fileUrl: string | null; uploaderName: string | null; createdAt: Date | null }[] = []
   try {
     const db = getDb()

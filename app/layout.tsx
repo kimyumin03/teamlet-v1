@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './teamlet-design.css'
+import { eq } from 'drizzle-orm'
+import { getCurrentUser } from '@/lib/current-user'
+import { getDb } from '@/lib/db'
+import { companies } from '@/lib/db/schema'
 import { Sidebar } from './_components/sidebar'
 
 export const metadata: Metadata = {
@@ -8,10 +12,19 @@ export const metadata: Metadata = {
   description: '인사·조직·휴가·결재를 한 곳에서. axhub 위에서 동작하는 Teamlet HR.',
 }
 
-// 🔒 axhub SDK 접속 일단 제거 — 회사/계정 정보는 나중에 다시 읽어와요(읽기 보류).
-//    복구 시: isAxhubConfigured() 후 makeAxhub().identity.me() 를 여기로.
+// 사이드바 표시용 — 실제 로그인 사용자(getCurrentUser, axhub me 연동) 이름 + 회사명.
 async function loadMe(): Promise<{ name: string; email: string; companyName: string } | null> {
-  return null
+  try {
+    const u = await getCurrentUser()
+    let companyName = 'Teamlet'
+    try {
+      const c = await getDb().select({ name: companies.name }).from(companies).where(eq(companies.id, u.companyId)).limit(1)
+      if (c[0]?.name) companyName = c[0].name
+    } catch {}
+    return { name: u.name, email: '', companyName }
+  } catch {
+    return null
+  }
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -9,7 +9,7 @@ import { getCurrentUser } from '@/lib/current-user'
 export const dynamic = 'force-dynamic'
 
 export default async function SettingsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let company: { name: string; businessNumber: string | null; phone: string | null; addressRoad: string | null; addressDetail: string | null } | null = null
   let depts: { id: string; name: string }[] = []
   let posList: { id: string; name: string }[] = []

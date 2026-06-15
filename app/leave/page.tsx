@@ -42,7 +42,7 @@ const STATUS_KO: Record<string, string> = {
 }
 
 async function load(): Promise<{ requests: LeaveRow[] }> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   try {
     const rows = await getDb()
       .select({

@@ -53,7 +53,7 @@ async function loadAll(): Promise<{
   recogs: RecogRow[]
   count: number
 }> {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   try {
     const db = getDb()
     const annRows = await db

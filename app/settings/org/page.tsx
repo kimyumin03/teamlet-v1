@@ -9,7 +9,7 @@ import { addDepartment, addPosition } from './actions'
 export const dynamic = 'force-dynamic'
 
 export default async function OrgSettingsPage() {
-  const user = getCurrentUser()
+  const user = await getCurrentUser()
   let depts: { id: string; name: string }[] = []
   let posList: { id: string; name: string }[] = []
   const deptCount = new Map<string, number>()
