@@ -58,7 +58,8 @@ export default async function SettingsPage() {
         <div className="kpi"><span className="lbl">공휴일</span><span className="val">{holidayCount}<small>일</small></span></div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        <Link href="/settings/company" className="btn btn-outline">회사 정보 수정</Link>
         <Link href="/settings/org" className="btn btn-outline">조직 관리</Link>
         <Link href="/settings/holidays" className="btn btn-outline">공휴일 관리</Link>
       </div>

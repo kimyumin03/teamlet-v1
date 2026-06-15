@@ -158,6 +158,7 @@ export const companies = pgTable('companies', {
   addressRoad: text('addressRoad'),
   addressDetail: text('addressDetail'),
   foundedAt: timestamp('foundedAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 // 공용 문서함
