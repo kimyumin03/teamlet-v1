@@ -67,6 +67,10 @@ export default async function SettingsPage() {
         <Link href="/settings/leave-policies" className="btn btn-outline">휴가 정책</Link>
         <Link href="/settings/permissions" className="btn btn-outline">권한</Link>
         <Link href="/settings/security" className="btn btn-outline">보안</Link>
+        <Link href="/settings/approval-policies" className="btn btn-outline">결재 정책</Link>
+        <Link href="/settings/notifications" className="btn btn-outline">알림</Link>
+        <Link href="/settings/form-templates" className="btn btn-outline">양식</Link>
+        <Link href="/settings/join-requests" className="btn btn-outline">가입 신청</Link>
       </div>
 
       {/* 부서 */}

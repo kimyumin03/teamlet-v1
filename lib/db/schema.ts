@@ -208,6 +208,33 @@ export const companySecurityPolicies = pgTable('company_security_policies', {
   ipRestrictionEnabled: boolean('ipRestrictionEnabled'),
 })
 
+// 결재 정책
+export const approvalPolicies = pgTable('approval_policies', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  name: text('name').notNull(),
+  category: text('category'),
+  isActive: boolean('isActive'),
+})
+
+// 양식 템플릿
+export const formTemplates = pgTable('form_templates', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  name: text('name').notNull(),
+  kind: text('kind'),
+  isActive: boolean('isActive'),
+})
+
+// 회사 가입 신청
+export const joinRequests = pgTable('join_requests', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId'),
+  userId: text('userId'),
+  status: text('status'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
 // 공용 문서함
 export const companyDocuments = pgTable('company_documents', {
   id: text('id').primaryKey(),
