@@ -208,6 +208,7 @@ export const departments = pgTable('departments', {
   name: text('name').notNull(),
   sortOrder: integer('sortOrder'),
   isActive: boolean('isActive'),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 export const positions = pgTable('positions', {
@@ -217,6 +218,7 @@ export const positions = pgTable('positions', {
   isOrgHead: boolean('isOrgHead'),
   sortOrder: integer('sortOrder'),
   isActive: boolean('isActive'),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 export const roles = pgTable('roles', {

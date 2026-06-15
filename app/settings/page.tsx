@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { companies, departments, positions, leaveTypes, companyHolidays } from '@/lib/db/schema'
@@ -58,7 +59,11 @@ export default async function SettingsPage() {
       </div>
 
       {/* 부서 */}
-      <div className="sec-divider">부서<span className="ct">{depts.length}</span><span className="line" /></div>
+      <div className="sec-divider">
+        부서<span className="ct">{depts.length}</span>
+        <Link href="/settings/org" style={{ fontSize: 12, color: 'var(--primary)', textDecoration: 'none', marginLeft: 8 }}>조직 관리 →</Link>
+        <span className="line" />
+      </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
         {depts.length === 0 ? <span style={{ color: 'var(--fg-muted)', fontSize: 13 }}>등록된 부서가 없어요.</span> : depts.map((d) => <span key={d.id} className="tag">{d.name}</span>)}
       </div>
