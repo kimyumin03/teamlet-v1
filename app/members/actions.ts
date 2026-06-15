@@ -89,3 +89,36 @@ export async function updateEmployee(formData: FormData): Promise<void> {
   revalidatePath('/members')
   redirect(ok ? `/members/${id}` : `/members/${id}/edit?error=db`)
 }
+
+// 구성원 추가 (모달용) — 객체 인자 + Result 반환 (원본 createEmployeeAction 시그니처).
+export async function createEmployeeResult(data: {
+  name: string
+  employeeNumber?: string
+  companyEmail?: string
+  hireDate?: string
+  departmentId?: string
+  positionId?: string
+}): Promise<ActionResult> {
+  const user = await getCurrentUser()
+  const name = (data.name || '').trim()
+  if (name.length < 2) return { ok: false, error: '이름을 2자 이상 입력해 주세요.' }
+  try {
+    await getDb()
+      .insert(employees)
+      .values({
+        id: crypto.randomUUID(),
+        companyId: user.companyId,
+        name,
+        employeeNumber: data.employeeNumber || null,
+        companyEmail: data.companyEmail || null,
+        hireDate: data.hireDate ? new Date(data.hireDate) : null,
+        departmentId: data.departmentId || null,
+        positionId: data.positionId || null,
+        updatedAt: new Date(),
+      })
+    return { ok: true }
+  } catch (err) {
+    console.error('[db] createEmployeeResult 실패', err)
+    return { ok: false, error: '저장 중 오류가 발생했어요.' }
+  }
+}

@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@teamlet/ui": ["./components/ui/index.ts"]
     }
   },
   "include": [

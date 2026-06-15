@@ -5,6 +5,8 @@ import { employees, departments, positions, roles, userRoles } from '@/lib/db/sc
 import { getCurrentUser } from '@/lib/current-user'
 import { DepartmentSidebar, type DepartmentNode } from './_components/department-sidebar'
 import { OrgTree } from './_components/org-tree'
+import { AddMemberButton } from './_components/add-member-button'
+import { MembersFilterBar } from './_components/members-filter-bar'
 
 // 구성원 디렉토리 — 원본 teamlet 그대로. 데이터는 자체 DB(Neon)의 실제 employees.
 export const dynamic = 'force-dynamic'
@@ -121,6 +123,10 @@ export default async function MembersPage({
 
   const user = await getCurrentUser()
   const { emps: allEmployees, depts } = await loadMembers(user.companyId)
+  const posList = await getDb()
+    .select({ id: positions.id, name: positions.name, isOrgHead: positions.isOrgHead })
+    .from(positions)
+    .where(and(eq(positions.companyId, user.companyId), eq(positions.isActive, true)))
 
   // 헤더 요약 통계
   const employedCount = allEmployees.filter(
@@ -187,8 +193,18 @@ export default async function MembersPage({
                   조직도
                 </Link>
               </div>
+              <AddMemberButton
+                departments={depts}
+                positions={posList}
+                defaultDepartmentId={selected && selected !== UNASSIGNED ? selected : null}
+              />
             </div>
           </div>
+        </div>
+
+        {/* 필터 · 검색 */}
+        <div className="shrink-0 px-8 pb-3">
+          <MembersFilterBar initialQ={params.q ?? ''} />
         </div>
 
         {/* 목록 */}
