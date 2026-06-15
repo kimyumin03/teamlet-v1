@@ -165,8 +165,8 @@ export default async function HomePage({
             <Link href="/leave" className="btn-sm btn-sm-ghost">
               휴가 신청
             </Link>
-            <Link href="/?tab=recognition" className="btn-sm">
-              동료에게 전달하기
+            <Link href="/announcements/new" className="btn-sm">
+              공지 작성
             </Link>
           </div>
         </div>

@@ -98,6 +98,7 @@ export const announcements = pgTable('announcements', {
   content: text('content'),
   isPinned: boolean('isPinned'),
   createdAt: timestamp('createdAt', { mode: 'date' }),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }),
 })
 
 // 결재 문서 (워크플로우)
