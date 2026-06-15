@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { AxHubError, where } from '@ax-hub/sdk'
-import { isAxhubConfigured, TENANT } from '@/lib/axhub-server'
-import { table } from '@/lib/data'
+import { desc, eq } from 'drizzle-orm'
+import { getDb } from '@/lib/db'
+import { formDocuments, employees } from '@/lib/db/schema'
+import { getCurrentUser } from '@/lib/current-user'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,14 +27,43 @@ const KIND: Record<string, { label: string; cls: string }> = {
   hr: { label: '인사', cls: 'hr' },
 }
 
+// ✅ 자체 DB(Neon)의 실제 결재 문서(form_documents)를 읽어와요.
+const KIND_FROM_REAL: Record<string, string> = { LEAVE_REQUEST: 'leave', LEAVE_PLAN: 'leave' }
+const STATUS_KO: Record<string, string> = {
+  DRAFT: '작성중', IN_PROGRESS: '진행', APPROVED: '승인', REJECTED: '반려', CANCELLED: '취소',
+}
+
 async function load(): Promise<Approval[]> {
-  if (!isAxhubConfigured()) return []
+  const user = getCurrentUser()
   try {
-    const t = await table<Approval>('approvals')
-    const page = await t.list({ where: where('company_id').eq(TENANT), limit: 200 })
-    return page.items ?? []
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: formDocuments.id,
+        title: formDocuments.title,
+        kind: formDocuments.kind,
+        status: formDocuments.status,
+        requester_name: employees.name,
+        created_at: formDocuments.createdAt,
+      })
+      .from(formDocuments)
+      .leftJoin(employees, eq(formDocuments.authorId, employees.id))
+      .where(eq(formDocuments.companyId, user.companyId))
+      .orderBy(desc(formDocuments.createdAt))
+    return rows.map((r) => ({
+      id: r.id,
+      doc_kind: KIND_FROM_REAL[r.kind ?? ''] ?? '',
+      doc_no: r.id.slice(-6).toUpperCase(),
+      title: r.title,
+      requester_name: r.requester_name ?? '',
+      requester_email: '',
+      amount: '',
+      status: STATUS_KO[r.status ?? ''] ?? (r.status ?? ''),
+      step: '',
+      created_at: (r.created_at ?? new Date()).toISOString(),
+    }))
   } catch (err) {
-    if (err instanceof AxHubError) console.error('[axhub] approvals', { code: err.code })
+    console.error('[db] workflow load 실패', err)
     return []
   }
 }

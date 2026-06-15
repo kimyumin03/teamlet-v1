@@ -9,6 +9,11 @@ build:
   dockerfile: Dockerfile
   deploy_method: docker
 env:
+  required:
+    # 자체 DB(Neon) 연결 — 쓰기 기능이 배포 환경에서 작동하려면 필수.
+    # 값은 콘솔/CLI 로 등록: printf %s "$DATABASE_URL" | axhub env set DATABASE_URL --app teamletv1 --secret --from-stdin --stage runtime
+    - name: DATABASE_URL
+      scope: runtime
   optional:
     - name: APPHUB_API_URL
       scope: runtime

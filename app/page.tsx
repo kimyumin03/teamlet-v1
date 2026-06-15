@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { AxHubError, where, type MeResponse } from '@ax-hub/sdk'
-import { isAxhubConfigured, makeAxhub, TENANT } from '@/lib/axhub-server'
-import { table } from '@/lib/data'
+import { eq, desc } from 'drizzle-orm'
+import { getDb } from '@/lib/db'
+import { announcements, recognitions, employees } from '@/lib/db/schema'
+import { getCurrentUser } from '@/lib/current-user'
 import { PostCard, type Announcement } from './_components/post-card'
 import { HomeRail } from './_components/home-rail'
 
@@ -45,30 +46,70 @@ function toAnnouncement(r: AnnRow): Announcement {
   }
 }
 
-async function loadAll() {
-  if (!isAxhubConfigured()) return { me: null, anns: [] as AnnRow[], recogs: [] as RecogRow[], count: 0 }
-  const safe = async <T,>(fn: () => Promise<T>, fallback: T): Promise<T> => {
-    try {
-      return await fn()
-    } catch (err) {
-      if (err instanceof AxHubError) console.error('[axhub] home load', { code: err.code })
-      return fallback
-    }
+// ✅ 자체 DB(Neon)에서 공지·인정·직원수를 읽어와요. (신원은 데모 직원)
+async function loadAll(): Promise<{
+  me: { name?: string; email?: string } | null
+  anns: AnnRow[]
+  recogs: RecogRow[]
+  count: number
+}> {
+  const user = getCurrentUser()
+  try {
+    const db = getDb()
+    const annRows = await db
+      .select({
+        id: announcements.id,
+        author: employees.name,
+        title: announcements.title,
+        body: announcements.content,
+        pinned: announcements.isPinned,
+        created_at: announcements.createdAt,
+      })
+      .from(announcements)
+      .leftJoin(employees, eq(announcements.authorId, employees.id))
+      .where(eq(announcements.companyId, user.companyId))
+      .orderBy(desc(announcements.createdAt))
+      .limit(50)
+    const anns: AnnRow[] = annRows.map((r) => ({
+      id: r.id,
+      company_id: user.companyId,
+      author: r.author ?? '',
+      role: '',
+      title: r.title,
+      body: r.body ?? '',
+      pinned: !!r.pinned,
+      created_at: (r.created_at ?? new Date()).toISOString(),
+    }))
+
+    const recogRows = await db
+      .select({
+        id: recognitions.id,
+        from_name: employees.name,
+        message: recognitions.message,
+        created_at: recognitions.createdAt,
+      })
+      .from(recognitions)
+      .leftJoin(employees, eq(recognitions.senderId, employees.id))
+      .where(eq(recognitions.companyId, user.companyId))
+      .orderBy(desc(recognitions.createdAt))
+      .limit(50)
+    const recogs: RecogRow[] = recogRows.map((r) => ({
+      id: r.id,
+      company_id: user.companyId,
+      from_name: r.from_name ?? '',
+      to_name: '',
+      message: r.message ?? '',
+      emoji: '',
+      created_at: (r.created_at ?? new Date()).toISOString(),
+    }))
+
+    const empRows = await db.select({ id: employees.id }).from(employees).where(eq(employees.companyId, user.companyId))
+
+    return { me: { name: user.name }, anns, recogs, count: empRows.length }
+  } catch (err) {
+    console.error('[db] home load 실패', err)
+    return { me: { name: user.name }, anns: [], recogs: [], count: 0 }
   }
-  const me = await safe<MeResponse | null>(async () => (await makeAxhub()).identity.me(), null)
-  const anns = await safe<AnnRow[]>(async () => {
-    const t = await table<AnnRow>('announcements')
-    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items ?? []
-  }, [])
-  const recogs = await safe<RecogRow[]>(async () => {
-    const t = await table<RecogRow>('recognitions')
-    return (await t.list({ where: where('company_id').eq(TENANT), limit: 50 })).items ?? []
-  }, [])
-  const count = await safe<number>(async () => {
-    const t = await table<{ id: string; company_id: string }>('employees')
-    return await t.count({ where: where('company_id').eq(TENANT) })
-  }, 0)
-  return { me, anns, recogs, count }
 }
 
 function isThisWeek(d: string) {

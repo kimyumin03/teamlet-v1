@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './teamlet-design.css'
-import { AxHubError, type MeResponse } from '@ax-hub/sdk'
-import { isAxhubConfigured, makeAxhub } from '@/lib/axhub-server'
 import { Sidebar } from './_components/sidebar'
 
 export const metadata: Metadata = {
@@ -10,21 +8,14 @@ export const metadata: Metadata = {
   description: '인사·조직·휴가·결재를 한 곳에서. axhub 위에서 동작하는 Teamlet HR.',
 }
 
-async function loadMe(): Promise<MeResponse | null> {
-  if (!isAxhubConfigured()) return null
-  try {
-    return await (await makeAxhub()).identity.me()
-  } catch (err) {
-    if (err instanceof AxHubError) {
-      console.error('[axhub] /me failed', { code: err.code, requestId: err.requestId })
-    }
-    return null
-  }
+// 🔒 axhub SDK 접속 일단 제거 — 회사/계정 정보는 나중에 다시 읽어와요(읽기 보류).
+//    복구 시: isAxhubConfigured() 후 makeAxhub().identity.me() 를 여기로.
+async function loadMe(): Promise<{ name: string; email: string; companyName: string } | null> {
+  return null
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const me = await loadMe()
-  const tenant = me?.tenants?.[0]
 
   return (
     <html lang="ko">
@@ -40,7 +31,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Sidebar
             userName={me?.name ?? ''}
             userEmail={me?.email ?? ''}
-            companyName={tenant?.tenantSlug ?? 'Teamlet'}
+            companyName={me?.companyName ?? 'Teamlet'}
           />
           <div className="main">
             <header className="topbar">

@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { AxHubError, where, type MeResponse } from '@ax-hub/sdk'
-import { isAxhubConfigured, makeAxhub } from '@/lib/axhub-server'
-import { table } from '@/lib/data'
+import { eq, desc } from 'drizzle-orm'
+import { getDb } from '@/lib/db'
+import { leaveRequests, leaveTypes } from '@/lib/db/schema'
+import { getCurrentUser } from '@/lib/current-user'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,16 +30,49 @@ function stCls(status: string) {
   return 'st end'
 }
 
-async function load(): Promise<{ me: MeResponse | null; requests: LeaveRow[] }> {
-  if (!isAxhubConfigured()) return { me: null, requests: [] }
+// ✅ 기존 teamlet DB(실제 leave_requests)에서 데모 직원의 휴가를 읽어와요.
+//    leave_types 와 조인해 한국어 종류명을, status(영어 enum)는 한국어로 변환해요.
+const STATUS_KO: Record<string, string> = {
+  DRAFT: '작성중',
+  PENDING: '대기',
+  APPROVED: '승인',
+  REJECTED: '반려',
+  CANCELLED: '취소',
+  CANCEL_PENDING: '취소대기',
+}
+
+async function load(): Promise<{ requests: LeaveRow[] }> {
+  const user = getCurrentUser()
   try {
-    const me = await (await makeAxhub()).identity.me()
-    const t = await table<LeaveRow>('leave_requests')
-    const page = await t.list({ where: where('employee_email').eq(me.email ?? ''), limit: 200 })
-    return { me, requests: page.items ?? [] }
+    const rows = await getDb()
+      .select({
+        id: leaveRequests.id,
+        typeName: leaveTypes.name,
+        startDate: leaveRequests.startDate,
+        endDate: leaveRequests.endDate,
+        days: leaveRequests.days,
+        reason: leaveRequests.reason,
+        status: leaveRequests.status,
+      })
+      .from(leaveRequests)
+      .leftJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
+      .where(eq(leaveRequests.employeeId, user.employeeId))
+      .orderBy(desc(leaveRequests.createdAt))
+    const requests: LeaveRow[] = rows.map((r) => ({
+      id: r.id,
+      employee_email: '',
+      employee_name: user.name,
+      leave_type: (r.typeName ?? '').replace(' 휴가', ''), // '경조사 휴가' → '경조사'
+      start_date: r.startDate,
+      end_date: r.endDate,
+      days: Number(r.days),
+      reason: r.reason ?? '',
+      status: STATUS_KO[r.status] ?? r.status,
+    }))
+    return { requests }
   } catch (err) {
-    if (err instanceof AxHubError) console.error('[axhub] leave load', { code: err.code })
-    return { me: null, requests: [] }
+    console.error('[db] leave load 실패', err)
+    return { requests: [] }
   }
 }
 
