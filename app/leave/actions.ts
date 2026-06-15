@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { leaveRequests, leaveTypes } from '@/lib/db/schema'
@@ -63,4 +64,21 @@ export async function requestLeave(formData: FormData): Promise<void> {
 
   // redirect 는 try 밖에서 (NEXT_REDIRECT 를 catch 가 삼키지 않도록)
   redirect(ok ? '/leave?saved=1' : '/leave/new?error=db')
+}
+
+// 휴가 승인/반려 — 대기(PENDING) 신청의 상태를 Neon 에서 갱신해요.
+export async function decideLeave(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') || '')
+  const decision = String(formData.get('decision') || '')
+  if (!id || (decision !== 'APPROVED' && decision !== 'REJECTED')) return
+  try {
+    await getDb()
+      .update(leaveRequests)
+      .set({ status: decision as 'APPROVED' | 'REJECTED', updatedAt: new Date() })
+      .where(eq(leaveRequests.id, id))
+  } catch (err) {
+    console.error('[db] decideLeave 실패', err)
+  }
+  revalidatePath('/leave/requests')
+  revalidatePath('/leave')
 }

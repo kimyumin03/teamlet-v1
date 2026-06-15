@@ -3,9 +3,9 @@ import { and, desc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { leaveRequests, leaveTypes, employees } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
+import { decideLeave } from '../actions'
 
-// 휴가 승인 — 회사 전체 대기(PENDING) 신청 목록. 원본 teamlet 그대로.
-// ⚠️ 승인/반려·부여 버튼은 쓰기·권한 보류라 숨김(로그인·권한 이식 때 복구).
+// 휴가 승인 — 회사 전체 대기(PENDING) 신청 목록. 승인/반려는 Neon 에 실제 반영돼요.
 export const dynamic = 'force-dynamic'
 
 function formatDate(d: string | null): string {
@@ -87,7 +87,11 @@ export default async function LeaveRequestsPage() {
                   </span>
                 </div>
                 <div className="shrink-0">
-                  <span className="st wait">대기</span>
+                  <form action={decideLeave} className="flex gap-2">
+                    <input type="hidden" name="id" value={r.id} />
+                    <button name="decision" value="APPROVED" className="btn btn-primary" style={{ padding: '5px 12px', fontSize: 12 }}>승인</button>
+                    <button name="decision" value="REJECTED" className="btn btn-outline" style={{ padding: '5px 12px', fontSize: 12 }}>반려</button>
+                  </form>
                 </div>
               </div>
             ))
