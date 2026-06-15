@@ -158,7 +158,28 @@ export const companies = pgTable('companies', {
   addressRoad: text('addressRoad'),
   addressDetail: text('addressDetail'),
   foundedAt: timestamp('foundedAt', { mode: 'date' }),
+  companyCode: text('companyCode'),
+  isActive: boolean('isActive'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
   updatedAt: timestamp('updatedAt', { mode: 'date' }),
+})
+
+// 플랫폼 사용자 (admin)
+export const users = pgTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  name: text('name'),
+  emailVerified: boolean('emailVerified'),
+  isActive: boolean('isActive'),
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
+// 사용자-회사 멤버십
+export const userCompanyMemberships = pgTable('user_company_memberships', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull(),
+  companyId: text('companyId').notNull(),
+  employeeId: text('employeeId'),
 })
 
 // 공용 문서함
