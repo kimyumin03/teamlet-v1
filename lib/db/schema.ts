@@ -153,6 +153,28 @@ export const companyHolidays = pgTable('company_holidays', {
   isNational: boolean('isNational'),
 })
 
+// 채용 공고
+export const jobPostings = pgTable('job_postings', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  managerId: text('managerId'),
+  title: text('title').notNull(),
+  status: text('status'), // DRAFT/OPEN/CLOSED/CANCELLED
+  createdAt: timestamp('createdAt', { mode: 'date' }),
+})
+
+// 감사 로그
+export const auditLogs = pgTable('audit_logs', {
+  id: text('id').primaryKey(),
+  companyId: text('companyId').notNull(),
+  occurredAt: timestamp('occurredAt', { mode: 'date' }),
+  actorEmail: text('actorEmail'),
+  actorName: text('actorName'),
+  activityType: text('activityType'),
+  eventType: text('eventType'),
+  description: text('description'),
+})
+
 export const departments = pgTable('departments', {
   id: text('id').primaryKey(),
   companyId: text('companyId').notNull(),
