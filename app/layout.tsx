@@ -7,6 +7,10 @@ import { isHrAdmin } from '@/lib/permissions'
 import { getDb } from '@/lib/db'
 import { companies } from '@/lib/db/schema'
 import { Sidebar } from './_components/sidebar'
+import { listNotifications, countUnreadNotifications } from '@/lib/actions/notification'
+import { NotificationBell } from '@/components/notification/notification-bell'
+import { CommandPalette } from '@/components/command-palette/command-palette'
+import { CommandPaletteTrigger } from '@/components/command-palette/command-palette-trigger'
 
 export const metadata: Metadata = {
   title: 'Teamlet — 한국형 HR',
@@ -35,6 +39,12 @@ async function loadMe(): Promise<{ name: string; email: string; companyName: str
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const me = await loadMe()
 
+  // 알림 데이터 (로그인 직원 기준) — notifications 테이블 미정의로 현재는 빈 배열/0 으로 안전 degrade.
+  const [notifResult, unreadCount] = me?.employeeId
+    ? await Promise.all([listNotifications(me.employeeId), countUnreadNotifications(me.employeeId)])
+    : [{ ok: true as const, data: [] }, 0]
+  const notifications = notifResult.ok ? notifResult.data : []
+
   return (
     <html lang="ko">
       <head>
@@ -55,15 +65,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           />
           <div className="main">
             <header className="topbar">
-              <div className="topbar-search">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
-                <span className="ph">검색…</span>
-                <span className="kbd-s">⌘K</span>
+              {me?.employeeId && <CommandPaletteTrigger />}
+              {me?.employeeId && <CommandPalette isAdmin={me.isAdmin} />}
+              <div className="top-actions">
+                {me?.employeeId && <NotificationBell items={notifications} unreadCount={unreadCount} />}
               </div>
-              <div className="top-actions" />
             </header>
             <main style={{ minHeight: 0, overflowY: 'auto' }}>{children}</main>
           </div>

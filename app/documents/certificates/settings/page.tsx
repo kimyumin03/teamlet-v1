@@ -1,53 +1,53 @@
 import Link from 'next/link'
-import { eq } from 'drizzle-orm'
+import { notFound } from 'next/navigation'
+import { and, asc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { certificateTemplates } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
+import { hasPermission } from '@/lib/permissions'
+import { CertificateTemplateManager } from './_components/certificate-template-manager'
+import type { CertificateTemplateItem } from '@/lib/modules/document'
 
-// 증명서 템플릿 설정 — 회사 증명서 양식 목록. 원본 teamlet 의 certificates/settings.
+// 증명서 종류 설정 — 관리자 전용(document.certificate.manage). 추가/삭제 모달. 원본 certificates/settings.
 export const dynamic = 'force-dynamic'
 
-const CERT_LABEL: Record<string, string> = { EMPLOYMENT: '재직증명서', CAREER: '경력증명서' }
-
-export default async function CertificateTemplatesPage() {
+export default async function CertificateSettingsPage() {
   const user = await getCurrentUser()
-  let list: { id: string; name: string; certType: string | null; isActive: boolean | null }[] = []
+  const canManage = await hasPermission(user.employeeId, 'document.certificate.manage')
+  if (!canManage) notFound()
+
+  let templates: CertificateTemplateItem[] = []
   try {
-    list = await getDb()
-      .select({ id: certificateTemplates.id, name: certificateTemplates.name, certType: certificateTemplates.certType, isActive: certificateTemplates.isActive })
+    const rows = await getDb()
+      .select({ id: certificateTemplates.id, name: certificateTemplates.name, certType: certificateTemplates.certType })
       .from(certificateTemplates)
-      .where(eq(certificateTemplates.companyId, user.companyId))
+      .where(and(eq(certificateTemplates.companyId, user.companyId), eq(certificateTemplates.isActive, true)))
+      .orderBy(asc(certificateTemplates.createdAt))
+    templates = rows.map((t) => ({ id: t.id, name: t.name, certType: (t.certType ?? 'EMPLOYMENT') as CertificateTemplateItem['certType'], fileUrl: '' }))
   } catch (err) {
     console.error('[db] cert templates load 실패', err)
   }
 
   return (
     <div className="page-body">
+      <Link
+        href="/documents/certificates"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 10,
+          fontSize: '12px', color: 'var(--fg-subtle)', textDecoration: 'none',
+        }}
+      >
+        ← 증명서 발급
+      </Link>
+
       <div className="page-h">
         <div>
-          <Link href="/documents/certificates" className="h-sub" style={{ textDecoration: 'none' }}>← 증명서</Link>
-          <h1 className="h-title" style={{ marginTop: 4 }}>증명서 템플릿</h1>
-          <div className="h-sub">증명서 양식을 관리해요</div>
+          <h1 className="h-title">증명서 종류 설정</h1>
+          <div className="h-sub">직원이 발급할 수 있는 증명서 종류를 등록·관리해요</div>
         </div>
       </div>
 
-      <div className="sec-divider">템플릿<span className="ct">{list.length}</span><span className="line" /></div>
-      {list.length === 0 ? (
-        <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--fg-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>등록된 템플릿이 없어요. (기본 양식으로 발급돼요)</div>
-      ) : (
-        <table className="tbl">
-          <thead><tr><th>이름</th><th style={{ width: 140 }}>종류</th><th style={{ width: 100 }}>상태</th></tr></thead>
-          <tbody>
-            {list.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontWeight: 600 }}>{t.name}</td>
-                <td><span className="tag">{CERT_LABEL[t.certType ?? ''] ?? t.certType ?? '—'}</span></td>
-                <td><span className={t.isActive !== false ? 'st ok' : 'st end'}>{t.isActive !== false ? '활성' : '비활성'}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <CertificateTemplateManager templates={templates} />
     </div>
   )
 }

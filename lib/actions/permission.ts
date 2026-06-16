@@ -7,9 +7,10 @@
 //   - revokeRole: isActive=false. SYSTEM_SUPER_ADMIN 해제는 마지막이면 거절(락아웃 가드).
 // ⚠️ v1 user_roles 스키마엔 assignedAt/assignedByUserId 컬럼이 없어 저장 안 함 (missingSchemaColumns).
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { getDb } from '@/lib/db'
-import { userRoles, roles, employees } from '@/lib/db/schema'
+import { userRoles, roles, employees, rolePermissions, permissions } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
 import { hasPermission } from '@/lib/permissions'
 import {
@@ -17,9 +18,24 @@ import {
   ok,
   err,
   errors,
+  roleCreateSchema,
+  roleUpdateSchema,
+  setRolePermissionsSchema,
   type ApiResponse,
   type Result,
+  type RoleCreateInput,
+  type RoleUpdateInput,
+  type SetRolePermissionsInput,
 } from '@teamlet/shared'
+import type {
+  CatalogCategory,
+  CatalogPermission,
+  RolePermissionItem,
+  PermissionAction,
+  PermissionSensitivity,
+} from '@/lib/modules/permission-catalog'
+import { PERMISSION_CATEGORIES } from '@/lib/modules/permission-catalog'
+import type { RoleListItem } from '@/lib/modules/permission'
 
 const ROLE_MANAGE = 'permission.role.manage'
 

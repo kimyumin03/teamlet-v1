@@ -3,8 +3,11 @@ import { desc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
 import { companyDocuments, employees } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
+import { hasPermission } from '@/lib/permissions'
+import { AddDocumentButton } from '@/components/document/add-document-button'
+import { DeleteDocumentButton } from '@/components/document/delete-document-button'
 
-// 문서·증명서 — 공용 문서 목록. 원본 teamlet 그대로 (읽기 전용; 추가/삭제는 쓰기 보류).
+// 문서·증명서 — 공용 문서 목록 + 추가/삭제 모달. 원본 teamlet 그대로 (쓰기는 Neon).
 export const dynamic = 'force-dynamic'
 
 const CATEGORY_LABEL: Record<string, string> = { GENERAL: '일반', NOTICE: '공지', POLICY: '정책' }
@@ -12,6 +15,7 @@ const CATEGORY_TAG: Record<string, string> = { GENERAL: 'tag', NOTICE: 'tag warn
 
 export default async function DocumentsPage() {
   const user = await getCurrentUser()
+  const canManage = await hasPermission(user.employeeId, 'document.company_archive.manage')
   let docs: { id: string; category: string | null; title: string; fileUrl: string | null; uploaderName: string | null; createdAt: Date | null }[] = []
   try {
     const db = getDb()
@@ -41,6 +45,7 @@ export default async function DocumentsPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/documents/certificates" className="btn btn-outline">증명서 발급</Link>
+          {canManage && <AddDocumentButton />}
         </div>
       </div>
 
@@ -51,12 +56,12 @@ export default async function DocumentsPage() {
       {docs.length === 0 ? (
         <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--fg-muted)' }}>
           <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--fg)', marginBottom: '6px' }}>등록된 문서가 없어요</div>
-          <div style={{ fontSize: '12.5px' }}>등록된 공용 문서가 아직 없어요.</div>
+          <div style={{ fontSize: '12.5px' }}>{canManage ? '문서 추가 버튼을 눌러 첫 자료를 올려보세요.' : '등록된 공용 문서가 아직 없어요.'}</div>
         </div>
       ) : (
         <table className="tbl">
           <thead>
-            <tr><th>분류</th><th>제목</th><th>올린 사람</th><th>등록일</th></tr>
+            <tr><th>분류</th><th>제목</th><th>올린 사람</th><th>등록일</th><th /></tr>
           </thead>
           <tbody>
             {docs.map((doc) => (
@@ -71,6 +76,9 @@ export default async function DocumentsPage() {
                 </td>
                 <td><span className="sn">{doc.uploaderName ?? '—'}</span></td>
                 <td><span className="sn">{doc.createdAt ? doc.createdAt.toLocaleDateString('ko-KR') : '—'}</span></td>
+                <td style={{ textAlign: 'right' }}>
+                  {canManage && <DeleteDocumentButton documentId={doc.id} title={doc.title} />}
+                </td>
               </tr>
             ))}
           </tbody>

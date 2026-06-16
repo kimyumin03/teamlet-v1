@@ -1,28 +1,45 @@
 import Link from 'next/link'
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db'
-import { certificateIssues, employees } from '@/lib/db/schema'
+import { certificateIssues, certificateTemplates, employees } from '@/lib/db/schema'
 import { getCurrentUser } from '@/lib/current-user'
-import { issueCertificate } from './actions'
+import { hasPermission } from '@/lib/permissions'
+import { IssueCertificateButton } from '@/components/document/issue-certificate-button'
+import type { CertificateTemplateItem } from '@/lib/modules/document'
 
-// 증명서 발급 — 발급 폼 + 발급 이력. 원본 teamlet 의 /documents/certificates.
+// 증명서 발급 — 발급 모달(템플릿 기반) + 발급 이력. 원본 teamlet 의 /documents/certificates.
 export const dynamic = 'force-dynamic'
 
 const TYPE_LABEL: Record<string, string> = { EMPLOYMENT: '재직증명서', CAREER: '경력증명서' }
+const TYPE_TAG: Record<string, string> = { EMPLOYMENT: 'tag ok', CAREER: 'tag wfh' }
 
 export default async function CertificatesPage() {
   const user = await getCurrentUser()
-  let issued: { id: string; employeeName: string | null; type: string; issueNumber: string; purpose: string; createdAt: Date | null }[] = []
+  const canManage = await hasPermission(user.employeeId, 'document.certificate.manage')
+
+  let issued: { id: string; employeeName: string | null; type: string; issueNumber: string; createdAt: Date | null }[] = []
   let people: { id: string; name: string }[] = []
+  let templates: CertificateTemplateItem[] = []
   try {
     const db = getDb()
     issued = await db
-      .select({ id: certificateIssues.id, employeeName: employees.name, type: certificateIssues.type, issueNumber: certificateIssues.issueNumber, purpose: certificateIssues.purpose, createdAt: certificateIssues.createdAt })
+      .select({ id: certificateIssues.id, employeeName: employees.name, type: certificateIssues.type, issueNumber: certificateIssues.issueNumber, createdAt: certificateIssues.createdAt })
       .from(certificateIssues)
       .innerJoin(employees, eq(certificateIssues.employeeId, employees.id))
       .where(eq(employees.companyId, user.companyId))
       .orderBy(desc(certificateIssues.createdAt))
-    people = await db.select({ id: employees.id, name: employees.name }).from(employees).where(eq(employees.companyId, user.companyId)).orderBy(asc(employees.name))
+
+    // 관리자만 타인 발급 가능 — 직원 목록을 모달에 넘겨요. 일반 직원은 본인만.
+    people = canManage
+      ? await db.select({ id: employees.id, name: employees.name }).from(employees).where(eq(employees.companyId, user.companyId)).orderBy(asc(employees.name))
+      : [{ id: user.employeeId, name: user.name }]
+
+    const tplRows = await db
+      .select({ id: certificateTemplates.id, name: certificateTemplates.name, certType: certificateTemplates.certType })
+      .from(certificateTemplates)
+      .where(and(eq(certificateTemplates.companyId, user.companyId), eq(certificateTemplates.isActive, true)))
+      .orderBy(asc(certificateTemplates.createdAt))
+    templates = tplRows.map((t) => ({ id: t.id, name: t.name, certType: (t.certType ?? 'EMPLOYMENT') as CertificateTemplateItem['certType'], fileUrl: '' }))
   } catch (err) {
     console.error('[db] certificates load 실패', err)
   }
@@ -35,51 +52,40 @@ export default async function CertificatesPage() {
           <h1 className="h-title" style={{ marginTop: 4 }}>증명서 발급</h1>
           <div className="h-sub">재직·경력 증명서를 발급해요</div>
         </div>
-        <Link href="/documents/certificates/settings" className="btn btn-outline">템플릿 설정</Link>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {canManage && <Link href="/documents/certificates/settings" className="btn btn-outline">종류 설정</Link>}
+          <IssueCertificateButton employees={people} selfEmployeeId={user.employeeId} templates={templates} />
+        </div>
       </div>
 
-      {/* 발급 폼 */}
-      <form action={issueCertificate} className="apply-card" style={{ marginBottom: 18 }}>
-        <h3>새 증명서 발급</h3>
-        <div className="form-grid">
-          <div className="fg-field">
-            <label>대상 직원 *</label>
-            <select name="employeeId" required className="ctl-in" defaultValue="">
-              <option value="" disabled>직원 선택</option>
-              {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="fg-field">
-            <label>종류 *</label>
-            <select name="type" className="ctl-in" defaultValue="EMPLOYMENT">
-              <option value="EMPLOYMENT">재직증명서</option>
-              <option value="CAREER">경력증명서</option>
-            </select>
-          </div>
-          <div className="fg-field full">
-            <label>발급 목적 *</label>
-            <input name="purpose" required className="ctl-in" placeholder="예: 은행 제출용" />
-          </div>
+      {canManage && templates.length === 0 && (
+        <div style={{
+          margin: '0 0 16px', padding: '12px 16px', borderRadius: 10,
+          background: 'var(--bg-warn, #fffbeb)', border: '1px solid var(--border-warn, #fde68a)',
+          fontSize: '13px', color: 'var(--fg-warn, #92400e)',
+        }}>
+          아직 등록된 증명서 종류가 없어요.{' '}
+          <Link href="/documents/certificates/settings" style={{ fontWeight: 600, color: 'inherit' }}>종류 설정</Link>
+          에서 먼저 증명서 종류를 추가해주세요.
         </div>
-        <div className="apply-actions">
-          <button type="submit" className="btn btn-primary">발급</button>
-        </div>
-      </form>
+      )}
 
       <div className="sec-divider">발급 이력<span className="ct">{issued.length}</span><span className="line" /></div>
       {issued.length === 0 ? (
-        <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--fg-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>발급된 증명서가 없어요.</div>
+        <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--fg-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>발급된 증명서가 없어요. 발급 신청 버튼을 눌러 첫 증명서를 발급해 보세요.</div>
       ) : (
         <table className="tbl">
-          <thead><tr><th>증명서 번호</th><th>대상</th><th style={{ width: 120 }}>종류</th><th>목적</th><th style={{ width: 110 }}>발급일</th></tr></thead>
+          <thead><tr><th>증명서 번호</th><th>대상</th><th style={{ width: 120 }}>종류</th><th style={{ width: 110 }}>발급일</th><th /></tr></thead>
           <tbody>
             {issued.map((c) => (
               <tr key={c.id}>
                 <td><Link href={`/documents/certificates/${c.id}`} style={{ fontWeight: 600, color: 'var(--fg)', textDecoration: 'none' }}>{c.issueNumber}</Link></td>
                 <td>{c.employeeName ?? '—'}</td>
-                <td><span className="tag">{TYPE_LABEL[c.type] ?? c.type}</span></td>
-                <td className="sn">{c.purpose}</td>
+                <td><span className={TYPE_TAG[c.type] ?? 'tag'}>{TYPE_LABEL[c.type] ?? c.type}</span></td>
                 <td><span className="sn">{c.createdAt ? c.createdAt.toLocaleDateString('ko-KR') : '—'}</span></td>
+                <td style={{ textAlign: 'right' }}>
+                  <Link href={`/documents/certificates/${c.id}`} className="btn btn-outline sm">인쇄</Link>
+                </td>
               </tr>
             ))}
           </tbody>
